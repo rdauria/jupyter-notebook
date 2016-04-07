@@ -10,7 +10,7 @@ from getopt import getopt
 import time
 import os
 import exceptions
-
+import platform
 
 import sys, getopt
 import os
@@ -28,6 +28,42 @@ port = 8789
 port=int(port)
 directory = ''
 directory = str(directory)
+opsys = platform.system()
+opsys = str(opsys)
+
+
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
+if opsys == 'Windows':
+    myssh = 'plink'
+    mycheck = which('myssh')
+    if mycheck == None:
+        print 'It appears that the program plink is not installed'
+        print 'on your computer or not available in your path.'
+        print 'Install Plink, a command-line interface to the PuTTY back' 
+        print 'ends. Availabe at: '
+        print 'http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html)'
+        print 'and add it to your path with: setx path "%path%;c:\directoryPath"'
+        sys.exit(2)
+else:
+    myssh = 'ssh'
 
 
 def main(argv):
@@ -123,7 +159,11 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+if myssh == 'ssh':
+    pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+elif myssh == 'plink':
+    pqsub=Popen(['plink','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+
 pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,numberofslots))+"\n")
 pqsub.stdin.write(('module load python/2.7.3')+"\n")
 pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
@@ -144,8 +184,11 @@ if directory:
 pqsub.stdin.write('ipython notebook --port=%s\n'%port)
 readwhile(pqsub.stdout, lambda line: line.find('NotebookApp')>0)
 
+if myssh == 'ssh':
+    tunnel = ['ssh','-4', '-t', '-Y', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-Y', hostname, '-L', '%s:localhost:%s'%(port,port)]
+elif myssh == 'plink':
+    tunnel = ['plink','-4', '-t', '-X', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-X', hostname, '-L', '%s:localhost:%s'%(port,port)]
 
-tunnel = ['ssh','-4', '-t', '-Y', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-Y', hostname, '-L', '%s:localhost:%s'%(port,port)]
 print ' '.join(tunnel)
 ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE)
 ptunnel.stdin.write('echo TUNNEL\n')
