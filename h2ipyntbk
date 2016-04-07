@@ -145,7 +145,7 @@ pqsub.stdin.write('ipython notebook --port=%s\n'%port)
 readwhile(pqsub.stdout, lambda line: line.find('NotebookApp')>0)
 
 
-tunnel = ['ssh','-4', '-t', '-Y', 'hoffman2.idre.ucla.edu', '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-Y', hostname, '-L', '%s:localhost:%s'%(port,port)]
+tunnel = ['ssh','-4', '-t', '-Y', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-Y', hostname, '-L', '%s:localhost:%s'%(port,port)]
 print ' '.join(tunnel)
 ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE)
 ptunnel.stdin.write('echo TUNNEL\n')
