@@ -32,29 +32,11 @@ opsys = platform.system()
 opsys = str(opsys)
 
 
-def which(program):
-    import os
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-
 
 if opsys == 'Windows':
-    myssh = 'plink'
-    mycheck = which('myssh')
-    if mycheck == None:
+    try:
+        mytest = call(['where','plink'])
+    except:
         print 'It appears that the program plink is not installed'
         print 'on your computer or not available in your path.'
         print 'Install Plink, a command-line interface to the PuTTY back' 
@@ -159,10 +141,10 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-if myssh == 'ssh':
-    pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
-elif myssh == 'plink':
+if opsys == 'Windows': 
     pqsub=Popen(['plink','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+else:
+    pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
 
 pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,numberofslots))+"\n")
 pqsub.stdin.write(('module load python/2.7.3')+"\n")
