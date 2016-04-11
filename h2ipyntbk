@@ -30,6 +30,8 @@ directory = ''
 directory = str(directory)
 opsys = platform.system()
 opsys = str(opsys)
+pythonver = '2.7.3'
+pythonver = str(pythonver)
 
 
 
@@ -42,7 +44,7 @@ if opsys == 'Windows':
         print 'Install Plink, a command-line interface to the PuTTY back' 
         print 'ends. Availabe at: '
         print 'http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html)'
-        print 'and add it to your path with: setx path "%path%;c:\directoryPath"'
+        print 'and add it to the system path via control panel'
         sys.exit(2)
 else:
     myssh = 'ssh'
@@ -51,17 +53,19 @@ else:
 def main(argv):
     global  username, timeinhours, memoryingb, numberofslots, port, directory
     try:
-        opts, args = getopt.getopt(argv,"h:u:t:m:s:p:d:",["user=","time=","memory=","slots=","port=","dir="])
+        opts, args = getopt.getopt(argv,"h:u:t:m:s:v:p:d:",["user=","time=","memory=","slots=","version=","port=","dir="])
     except getopt.GetoptError:
         print 'Usage:'
-        print '\n\t','test.py [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-p <port>] [-d <dir>]','\n'
+        print '\n\t','test.py [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]','\n'
         print 'If no arguments are given to this script it is assumed that:'
         print '\t','your Hoffman2 user name is the same as on your client machine'
         print '\t','the time duration for your session is of 2 hours'
         print '\t','the memory per slot for your session is of 1GB'
         print '\t','the number of slots for your session is of 1'
+        print '\t','the python version for your notebook is 2.7.3'
         print '\t','the port on which the server is started is 8789'
         print '\t','the starting directory on Hoffman2 is your $HOME'
+        print '\n\t','python versions currently available are 2.7.3 or 3.4','\n'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
@@ -91,6 +95,13 @@ def main(argv):
             except exceptions.KeyError:
                 print('Setting the number of slots to 1...')
                 numberofslots = 1
+        elif opt in ("-v", "--version"):
+            pythonver = arg
+            pythonver = str(pythonver)
+            if (not pythonver == '2.7.3') and (not pythonver == '3.4'):
+                print 'version ',pythonver,'of python not available'
+                print 'setting python version to 2.7.3'
+                pythonver = '2.7.3'
         elif opt in ("-p", "--port"):
             port = arg
             try:
@@ -103,12 +114,13 @@ def main(argv):
             directory = str(directory)
         else:
             print 'Usage:'
-            print '\n\t','test.py -u <Hoffman2 user name> -t <time in hours> [-p <port>] [-d <dir>]','\n'
+            print '\n\t','test.py -u <Hoffman2 user name> -t <time in hours>  [-v <python-version>] [-p <port>] [-d <dir>]','\n'
             print 'If no arguments are given to this script it is assumed that:'
             print '\t','your Hoffman2 user name is the same as on your client machine'
             print '\t','the time duration for your session is of 2 hours'
             print '\t','the memory per slot for your session is of 1GB'
             print '\t','the number of slots for your session is of 1'
+            print '\t','the python version for your notebook is 2.7.3'
             print '\t','the port on which the server is started is 8789'
             print '\t','the starting directory on Hoffman2 is your $HOME'
             sys.exit(2)
@@ -120,6 +132,7 @@ def main(argv):
     print 'The time in hours is ', timeinhours
     print 'The memory in GB per slots is ', memoryingb
     print 'The number of slots is ', numberofslots
+    print 'The version of python for the notebook is ', pythonver
     print 'The port is ', port
     if not directory:
         print 'The directory on Hoffman2 is $HOME'
@@ -130,7 +143,7 @@ if __name__ == "__main__":
    main(sys.argv[1:])
 
 QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -l i,h_rt=%d:00:00,h_data=%dg -pe dc\* %d")
-
+MODULE_LOAD_TEMP = "module load python/%s"
 
 def readwhile(stream,func):
     while True:
@@ -147,7 +160,8 @@ else:
     pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
 
 pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,numberofslots))+"\n")
-pqsub.stdin.write(('module load python/2.7.3')+"\n")
+#pqsub.stdin.write(('module load python/2.7.3')+"\n")
+pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver)+"\n")
 pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
 
 def gethostname(line):
