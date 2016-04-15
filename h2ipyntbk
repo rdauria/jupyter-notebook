@@ -51,7 +51,7 @@ else:
 
 
 def main(argv):
-    global  username, timeinhours, memoryingb, numberofslots, port, directory
+    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory
     try:
         opts, args = getopt.getopt(argv,"h:u:t:m:s:v:p:d:",["user=","time=","memory=","slots=","version=","port=","dir="])
     except getopt.GetoptError:
