@@ -56,7 +56,7 @@ def main(argv):
         opts, args = getopt.getopt(argv,"h:u:t:m:s:v:p:d:",["user=","time=","memory=","slots=","version=","port=","dir="])
     except getopt.GetoptError:
         print 'Usage:'
-        print '\n\t','test.py [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]','\n'
+        print '\n\t','h2ipynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]','\n'
         print 'If no arguments are given to this script it is assumed that:'
         print '\t','your Hoffman2 user name is the same as on your client machine'
         print '\t','the time duration for your session is of 2 hours'
@@ -69,7 +69,7 @@ def main(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -u <Hoffman2 user name> -t <time in hours> [-p <port> [-d <dir>]'
+            print 'h2ipynb -u <Hoffman2 user name> -t <time in hours> [-p <port> [-d <dir>]'
             sys.exit()
         elif opt in ("-u", "--user"):
             username = arg
@@ -114,7 +114,7 @@ def main(argv):
             directory = str(directory)
         else:
             print 'Usage:'
-            print '\n\t','test.py -u <Hoffman2 user name> -t <time in hours>  [-v <python-version>] [-p <port>] [-d <dir>]','\n'
+            print '\n\t','h2ipynb -u <Hoffman2 user name> -t <time in hours>  [-v <python-version>] [-p <port>] [-d <dir>]','\n'
             print 'If no arguments are given to this script it is assumed that:'
             print '\t','your Hoffman2 user name is the same as on your client machine'
             print '\t','the time duration for your session is of 2 hours'
