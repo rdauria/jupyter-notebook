@@ -1,6 +1,6 @@
 # h2ipynb: Jupyter notebook launcer script for the Hoffman2 cluster
 
-*Jupiter notebook was formerly known as IPython notebook*
+*Jupiter notebook, formerly known as IPython notebook*
 
 
 Launch an interactive session on the a compute node of the Hoffman2 cluster via the UGE scheduler from your local computer and displayes it on your local browser. 
