@@ -35,7 +35,7 @@ h2ipynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <
 	 the port on which the server is started is 8789
 	 the starting directory on Hoffman2 is your $HOME
 
-	 python versions currently available are 2.7.3 or 3.4
+	 python versions currently available are 2.7.3, 2.7.13 or 3.4
 ```
 	 
 The script can be run either by issuing:
