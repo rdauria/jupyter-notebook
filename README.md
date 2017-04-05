@@ -1,4 +1,4 @@
-# h2ipynb: Jupyter notebook launcer script for the Hoffman2 cluster
+# h2jupynb: Jupyter notebook launcher script for the Hoffman2 cluster
 
 *Jupiter notebook, formerly known as IPython notebook*
 
@@ -9,7 +9,7 @@ The script (adapted from: https://github.com/pyHPC/ipynbhpc) performs the follow
 
 1. connectes to a login node of the Hoffman2 cluster
 2. launches an interactive session on one (or more) compute node (number of cores is requestable)
-3. loads the python module that you have requested (or else uses the 2.7.3 default version)
+3. loads the python module that you have requested (or else uses the 2.7.13 default version)
 4. starts the notebook server on a given port (requestable)
 5. back on your machine, starts an ssh-port-forwarding to the cluster to the given notebook port
 6. opens your default web browser on your local machine 
@@ -18,12 +18,12 @@ Your notebook then should appear on your default web browser on your local machi
 
 To display usage issue:
 
-`h2ipynb --help`
+`h2jupynb --help`
 
 You will get:
 
 ```
-h2ipynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]
+h2juynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]
  
  If no arguments are given to this script it is assumed that:
 
@@ -31,21 +31,21 @@ h2ipynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <
 	 the time duration for your session is of 2 hours
 	 the memory per slot for your session is of 1GB
 	 the number of slots for your session is of 1
-	 the python version for your notebook is 2.7.3
+	 the python version for your notebook is 2.7.13
 	 the port on which the server is started is 8789
 	 the starting directory on Hoffman2 is your $HOME
 
-	 python versions currently available are 2.7.3 or 3.4
+	 python versions currently available are 2.7.3, 2.7.13 or 3.4
 ```
 	 
 The script can be run either by issuing:
 
-`./h2ipynb`
+`./h2jupynb`
 
 or by issuing:
 
-`python h2ipynb`
+`python h2jupynb`
 
 or:
 
-`python3 h2ipynb`
+`python3 h2jupynb`
