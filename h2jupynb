@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import print_function
 """In order to use the script you need to copy your SSH key to the target server
 and also copy the server SSH public key (usually .ssh/id_rsa.pub) to .ssh/authorized_keys, 
