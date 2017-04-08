@@ -71,8 +71,7 @@ def main(argv):
         print("\t the python version for your notebook is 2.7.13")
         print("\t the port on which the server is started is 8789")
         print("\t the starting directory on Hoffman2 is your $HOME")
-        print("\n\t python versions currently available are 2.7.13 or 3.6.1")
-        print("\n\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
+        print("\n\t python versions currently available are 2.7.3, 2.7.13 or 3.4 \n")
         sys.exit(2)
 
     for opt, arg in opts:
@@ -106,7 +105,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '3.4') and (not pythonver == '3.6.1'):
+            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '3.4'):
                 print("version ,pythonver, of python not available")
                 print("setting python version to 2.7.13")
                 pythonver = '2.7.13'
@@ -193,21 +192,13 @@ if directory:
     pqsub.stdin.write('echo CD\n')
     readwhile(pqsub.stdout, lambda line: line.startswith('CD'))
  
-def gethttpcommand(line):
-    global httpcommand
-    if line.find('localhost')>0:
-       httpcommand = line.split('at: ')[1].strip()
-       return True
 
    
 pqsub.stdin.write(STARTNBCMD + ' --port=%s\n'%port)
 pqsub.stdin.flush()
-
 if (STARTNBCMD == 'jupyter notebook'):
-  #readwhile(pqsub.stdout, lambda line: line.find('localhost')>0)
-  #print("\n\tUse the token above to log into your notebook as needed\n")
-  readwhile(pqsub.stdout, gethttpcommand)
-  print("\n\t", httpcommand, "\n")
+  readwhile(pqsub.stdout, lambda line: line.find('localhost')>0)
+  print("\n\tUse the token above to log into your notebook as needed\n")
 else:
   readwhile(pqsub.stdout, lambda line: line.find('NotebookApp')>0)
 
@@ -225,10 +216,8 @@ ptunnel.stdin.flush()
 
 readwhile(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
 
-if (STARTNBCMD == 'jupyter notebook'):
-  webbrowser.open(httpcommand)
-else:
-  webbrowser.open('http://localhost:%s'%(port))
+
+webbrowser.open('http://localhost:%s'%(port))
 
 print("Succesfully opened notebook!")
 print("Kill this process to end your notebook connection.")
