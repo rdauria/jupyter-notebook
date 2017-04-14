@@ -225,10 +225,16 @@ ptunnel.stdin.flush()
 
 readwhile(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
 
-if (STARTNBCMD == 'jupyter notebook'):
-  webbrowser.open(httpcommand)
+if ('CYGWIN' in opsys) or ('Cygwin' in opsys) or ('cygwin' in opsys):
+   if (STARTNBCMD == 'jupyter notebook'):
+     call(["cygstart",httpcommand])
+   else:
+     call(["cygstart",'http://localhost:%s'%(port)])
 else:
-  webbrowser.open('http://localhost:%s'%(port))
+   if (STARTNBCMD == 'jupyter notebook'):
+     webbrowser.open(httpcommand)
+   else:
+     webbrowser.open('http://localhost:%s'%(port))
 
 print("Succesfully opened notebook!")
 print("Kill this process to end your notebook connection.")
