@@ -173,11 +173,6 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-#if opsys == 'Windows': 
-#    pqsub=Popen(['plink','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-#else:
-#    
-
 pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 pqsub.stdin.flush()
 pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,numberofslots))+"\n")
