@@ -134,7 +134,10 @@ def main(argv):
             sys.exit(2)
             
     if not username:
-        username = str(os.environ["USER"])
+	if opsys == 'Windows':
+	   username = str(os.environ["USERNAME"])
+	else:
+           username = str(os.environ["USER"])
 
 
     print("Your Hoffman2 user name is", username )
