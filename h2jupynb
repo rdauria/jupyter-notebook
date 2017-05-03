@@ -42,18 +42,18 @@ if sys.version_info<(2,6,0):
 
 if opsys == 'Windows':
     try:
-        mytest = call(['where','plink'])
+	ret=call(['where','ssh.exe'])
+	#mytest = 'MINGW' in os.environ['MSYSTEM']
     except:
-        print("It appears that the program plink is not installed")
-        print("on your computer or not available in your path.")
-        print("Install Plink, a command-line interface to the PuTTY back")
-        print("ends. Availabe at: ")
-        print("http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html")
-        print("and add it to the system path via control panel")
+        print("It appears that Git for Windows is not installed")
+        print("or that you are not running this script from its")
+        print("Git BASH terminal. Please install either Git for")
+        print("Windows, availabe at: ")
+        print("https://git-scm.com/download/win")
+        print("and run this script from its git BASH.")
         sys.exit(2)
 
-else:
-    myssh = 'ssh'
+myssh = 'ssh'
 
 
 def main(argv):
@@ -170,11 +170,13 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-if opsys == 'Windows': 
-    pqsub=Popen(['plink','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-else:
-    pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+#if opsys == 'Windows': 
+#    pqsub=Popen(['plink','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+#else:
+#    
 
+pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+pqsub.stdin.flush()
 pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,numberofslots))+"\n")
 pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
 pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
