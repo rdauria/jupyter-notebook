@@ -154,7 +154,7 @@ def main(argv):
 if __name__ == "__main__":
    main(sys.argv[1:])
 
-QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -l i,h_rt=%d:00:00,h_data=%dg -pe dc\* %d")
+QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYTERNB -l i,h_rt=%d:00:00,h_data=%dg -pe dc\* %d")
 MODULE_LOAD_TEMP = "module load python/%s"
 
 
