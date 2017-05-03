@@ -49,7 +49,7 @@ if opsys == 'Windows':
         print("or that you are not running this script from its")
         print("Git BASH terminal. Please install either Git for")
         print("Windows, availabe at: ")
-        print("https://git-scm.com/download/win")
+        print("https://git-for-windows.github.io/")
         print("and run this script from its git BASH.")
         sys.exit(2)
 
