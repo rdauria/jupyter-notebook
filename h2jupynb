@@ -42,7 +42,7 @@ if sys.version_info<(2,6,0):
 
 if opsys == 'Windows':
     try:
-	ret=call(['where','ssh.exe'])
+        ret=call(['where','ssh.exe'])
 	#mytest = 'MINGW' in os.environ['MSYSTEM']
     except:
         print("It appears that Git for Windows is not installed")
@@ -134,9 +134,9 @@ def main(argv):
             sys.exit(2)
             
     if not username:
-	if opsys == 'Windows':
-	   username = str(os.environ["USERNAME"])
-	else:
+        if opsys == 'Windows':
+           username = str(os.environ["USERNAME"])
+        else:
            username = str(os.environ["USER"])
 
 
@@ -246,6 +246,7 @@ ptunnel.kill()
 
 
 print("Succesfully cleaned up connections.")
+
 
 
 
