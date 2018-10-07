@@ -195,11 +195,10 @@ if directory:
  
 def gethttpcommand(line):
     global httpcommand
-    if line.find('localhost')>0:
-       httpcommand = line.split('at: ')[1].strip()
+    if (line.find('localhost')>0):
+       httpcommand = line.split(' ')[-1]
        return True
 
-   
 pqsub.stdin.write(STARTNBCMD + ' --port=%s\n'%port)
 pqsub.stdin.flush()
 
