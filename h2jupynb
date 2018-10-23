@@ -71,7 +71,7 @@ def main(argv):
         print("\t the python version for your notebook is 2.7.13")
         print("\t the port on which the server is started is 8789")
         print("\t the starting directory on Hoffman2 is your $HOME")
-        print("\n\t python versions currently available are 2.7.13 or 3.6.1")
+        print("\n\t python versions currently available are: 2.7.13, 3.6.1 and 3.7.0")
         print("\n\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
         sys.exit(2)
 
@@ -106,7 +106,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '3.4') and (not pythonver == '3.6.1'):
+            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and (not pythonver == '3.7.0'):
                 print("version ,pythonver, of python not available")
                 print("setting python version to 2.7.13")
                 pythonver = '2.7.13'
