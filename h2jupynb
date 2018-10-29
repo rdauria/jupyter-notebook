@@ -36,6 +36,7 @@ pythonver = str(pythonver)
 usegpu='no'
 gpu = 'P4'
 highp = 'no'
+cudaver='9.1'
 #qrsh_error='no'
 
 if sys.version_info<(2,6,0):
@@ -60,12 +61,12 @@ myssh = 'ssh'
 
 
 def main(argv):
-    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, highp
+    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, cudaver, highp
     try:
-        opts, args = getopt.getopt(argv,"h:u:t:m:s:v:p:d:g:c:o:",["user=","time=","memory=","slots=","version=","port=","dir=","ugpu=","gpu=","highp="])
+        opts, args = getopt.getopt(argv,"h:u:t:m:s:v:p:d:g:c:l:o:",["username=","timeinhours=","memoryingn=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp="])
     except getopt.GetoptError:
         print("Usage:")
-        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-o <yes/no>] [-d <dir>] \n")
+        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <yes/no>] [-d <dir>] \n")
         print("If no arguments are given to this script it is assumed that:")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
@@ -75,10 +76,12 @@ def main(argv):
         print("\t the port on which the server is started is 8789")
         print("\t use GPU? default is no")
         print("\t GPU type default is P4 (if -g = yes)")
+        print("\t CUDA version 9.1 (if -g = yes)")
         print("\t not running on owned nodes")
         print("\t the starting directory on Hoffman2 is your $HOME")
         print("\n\t python versions currently available are: 2.7.13, 3.6.1 and 3.7.0")
-        print("\n\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
+        print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
+        print("\t cuda versions: 7.0 7.5 8.0 9.1\n")
         sys.exit(2)
 
     for opt, arg in opts:
@@ -140,7 +143,14 @@ def main(argv):
             if (not gpu == 'P4') and (not gpu == 'K40') and (not gpu == 'GTX1080Ti'):
                 print("version, ",gpu,", of GPU not available")
                 print("setting GPU version to P4")
-                gpu = 'P4'            
+                gpu = 'P4'
+        elif opt in ("-l", "--cuda"):
+            cudaver = arg
+            cudaver = str(cudaver)
+            if (not cudaver == '7.0') and (not cudaver == '7.5') and (not cudaver == '8.0') and (not cudaver == '9.1'):
+                print("version, ",cudaver,", not available")
+                print("setting cuda version to 9.1")
+                gpu = '9.1'            
         elif opt in ("-o", "--highp"):
             highp = arg
             highp = str(highp)
@@ -185,8 +195,10 @@ def main(argv):
        print("Your Jupyter NB or lab will run on owned resources")
     elif (usegpu == 'yes') and (highp == 'no'):
        print("Your Jupyter NB or lab will run on a GPU node")
+       print("Your Jupyter NB or lab will load cuda version ",cudaver)
     elif (usegpu == 'yes') and (highp == 'yes'):
        print("Your Jupyter NB or lab will run on a GPU owned node")  
+       print("Your Jupyter NB or lab will load cuda version ",cudaver)
     print("The port is" , port)
     if not directory:
         print("The directory on Hoffman2 is $HOME")
@@ -204,6 +216,7 @@ elif (usegpu == 'yes') and (highp == 'no'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dg,gpu,%s -pe dc\* %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dg,gpu,%s,highp -pe dc\* %d -w e")
+MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load python/%s"
 
 
@@ -246,6 +259,8 @@ elif (usegpu == 'yes') and (highp == 'yes'):
 #    pqsub.kill()
 #    #raise SystemExit
 #else:
+if (usegpu == 'yes'):
+   pqsub.stdin.write(MODULE_LOADCUDA_TEMP % (cudaver) +"\n")
 pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
 pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
 pqsub.stdin.flush()
