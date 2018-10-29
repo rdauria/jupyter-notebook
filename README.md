@@ -23,19 +23,28 @@ To display usage issue:
 You will get:
 
 ```
-h2juynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-d <dir>]
- 
- If no arguments are given to this script it is assumed that:
+Usage:
 
+	 h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <yes/no>] [-d <dir>] 
+
+If no arguments are given to this script it is assumed that:
 	 your Hoffman2 user name is the same as on your client machine
 	 the time duration for your session is of 2 hours
 	 the memory per slot for your session is of 1GB
 	 the number of slots for your session is of 1
 	 the python version for your notebook is 2.7.13
 	 the port on which the server is started is 8789
+	 use GPU? default is no
+	 GPU type default is P4 (if -g = yes)
+	 CUDA version 9.1 (if -g = yes)
+	 not running on owned nodes
 	 the starting directory on Hoffman2 is your $HOME
 
-	 python versions currently available are 2.7.3, 2.7.13 or 3.4
+	 python versions currently available are: 2.7.13, 3.6.1 and 3.7.0
+	 python versions: 2.7.3 or 3.4 are available but deprecated.
+
+	 cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1
+
 ```
 	 
 The script can be run either by issuing:
