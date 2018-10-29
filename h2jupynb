@@ -172,7 +172,7 @@ def main(argv):
             print("\t the memory per slot for your session is of 1GB")
             print("\t the number of slots for your session is of 1")
             print("\t the python version for your notebook is 2.7.13")
-	    print("\t use GPU? default is no")
+            print("\t use GPU? default is no")
             print("\t GPU type default is P4 (if -g = yes)")
             print("\t not running on owned nodes")
             print("\t the port on which the server is started is 8789")
