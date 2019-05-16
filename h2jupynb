@@ -161,7 +161,7 @@ def main(argv):
                 print("HIGHP= ",highp," Jupyter notebook or lab will run on owned node(s)")
                 highp='yes'
         elif opt in ("-d", "--dir"):
-            directory = (arg,None)
+            directory = arg
             directory = str(directory)
         else:
             print("Usage:")
