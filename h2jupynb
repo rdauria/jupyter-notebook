@@ -79,7 +79,8 @@ def main(argv):
         print("\t CUDA version 9.1 (if -g = yes)")
         print("\t not running on owned nodes")
         print("\t the starting directory on Hoffman2 is your $HOME")
-        print("\n\t python versions currently available are: 2.7.13, 3.6.1 and 3.7.0")
+        print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1 and 3.7.0")
+        print("\t or: anaconda2 and anaconda3")
         print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
         print("\t cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1\n")
         sys.exit(2)
@@ -115,7 +116,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and (not pythonver == '3.7.0'):
+            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '2.7.16') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and (not pythonver == 'anaconda2') and (not pythonver == '3.6.1') and (not pythonver == 'anaconda3'):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 2.7.13")
                 pythonver = '2.7.13'
