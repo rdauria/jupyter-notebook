@@ -25,22 +25,26 @@ You will get:
 ```
 Usage:
 
-	 h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <yes/no>] [-d <dir>] 
+h2jupynb [-u <Hoffman2 user name>] [-t <time - integer number of hours>] [-m <memory - integer number of GB>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]
 
 If no arguments are given to this script it is assumed that:
 	 your Hoffman2 user name is the same as on your client machine
 	 the time duration for your session is of 2 hours
+	 the parallel environment is shared
 	 the memory per slot for your session is of 1GB
 	 the number of slots for your session is of 1
 	 the python version for your notebook is 2.7.13
 	 the port on which the server is started is 8789
+	 the starting directory on Hoffman2 is your $HOME
 	 use GPU? default is no
 	 GPU type default is P4 (if -g = yes)
 	 CUDA version 9.1 (if -g = yes)
 	 not running on owned nodes
-	 the starting directory on Hoffman2 is your $HOME
+	 not running in exclusive mode
+	 no specific CPU selected (see ARCH in qhost output)
 
-	 python versions currently available are: 2.7.13, 3.6.1 and 3.7.0
+	 python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2
+	 or: anaconda2 and anaconda3
 	 python versions: 2.7.3 or 3.4 are available but deprecated.
 
 	 cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1
