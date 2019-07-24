@@ -286,7 +286,7 @@ elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
 elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s$s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
