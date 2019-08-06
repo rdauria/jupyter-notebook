@@ -73,7 +73,7 @@ def main(argv):
         opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:l:o:x:a:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch="])
     except getopt.GetoptError:
         print("Usage:")
-        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-e <parallel environment: 1 for shared, 2 for distributed >] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <yes/no>] [-d <dir>] [-x <yes/no>] [-a <CPU-type>]\n")
+        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-e <parallel environment: 1 for shared, 2 for distributed >] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <run on group owned nodes: yes/no>] [-d <dir>] [-x <run on an exclusively reserved node: yes/no>] [-a <CPU-type>]\n")
         print("If no arguments are given to this script it is assumed that:")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
@@ -84,8 +84,8 @@ def main(argv):
         print("\t the port on which the server is started is 8789")
         print("\t the starting directory on Hoffman2 is your $HOME")
         print("\t use GPU? default is no")
-        print("\t GPU type default is P4 (if -g = yes)")
-        print("\t CUDA version 9.1 (if -g = yes)")
+        print("\t GPU type default is P4 (if -g yes)")
+        print("\t CUDA version 9.1 (if -g yes)")
         print("\t not running on owned nodes")
         print("\t not running in exclusive mode")
         print("\t no specific CPU selected (see ARCH in qhost output)")
@@ -227,8 +227,8 @@ def main(argv):
           print("\t the port on which the server is started is 8789")
           print("\t the starting directory on Hoffman2 is your $HOME")
           print("\t use GPU? default is no")
-          print("\t GPU type default is P4 (if -g = yes)")
-          print("\t CUDA version 9.1 (if -g = yes)")
+          print("\t GPU type default is P4 (if -g yes)")
+          print("\t CUDA version 9.1 (if -g yes)")
           print("\t not running on owned nodes")
           print("\t not running in exclusive mode")
           print("\t no specific CPU selected (see ARCH in qhost output)")
@@ -275,7 +275,7 @@ def main(argv):
 if __name__ == "__main__":
    main(sys.argv[1:])
 
-#print("usegpu= ",usegpu," highp= ",highp," exclusive= ",exclusive)
+print("usegpu= ",usegpu," highp= ",highp," exclusive= ",exclusive, "gputype= ",gpu, "arch= ",arch, "time= ",timeinhours, "mem= ",memoryingb, "PE= ", parenv, "NSLOTS= ",numberofslots)
 
 
 if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
@@ -285,6 +285,8 @@ elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
 elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
+elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
@@ -318,15 +320,23 @@ pqsub.stdin.flush()
 pqsub.stdout.flush()
 
 
-if (usegpu == 'no') and (highp == 'no'): 
+#
+#if (usegpu == 'no') and (highp == 'no'): 
+#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+#elif (usegpu == 'no') and (highp == 'yes'):
+#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+#elif (usegpu == 'yes') and (highp == 'no'):
+#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
+#elif (usegpu == 'yes') and (highp == 'yes'):
+#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
+#
+if (usegpu == 'no'):
    pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
-elif (usegpu == 'no') and (highp == 'yes'):
-   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
-elif (usegpu == 'yes') and (highp == 'no'):
-   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
-elif (usegpu == 'yes') and (highp == 'yes'):
-   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
-# check for error on qrsh:
+elif (usegpu == 'yes'):
+   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n") 
+
+
+# check for error on qrsh --- WE CAN GET error: no suitable queues b/c of -w e: 
 #def getqrsherror(line):
 #    global qrsh_error
 #    if (line.find('error: no suitable queues')>0):
