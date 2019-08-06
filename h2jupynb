@@ -73,7 +73,7 @@ def main(argv):
         opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:l:o:x:a:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch="])
     except getopt.GetoptError:
         print("Usage:")
-        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time in hours>] [-m <memory in GB>] [-e <parallel environment: 1 for shared, 2 for distributed >] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <run on group owned nodes: yes/no>] [-d <dir>] [-x <run on an exclusively reserved node: yes/no>] [-a <CPU-type>]\n")
+        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] [-e <parallel environment: 1 for shared, 2 for distributed >] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <run on group owned nodes: yes/no>] [-d <path to directory from which the jupyter NB/lab will start>] [-x <run on an exclusively reserved node: yes/no>] [-a <CPU-type>]\n")
         print("If no arguments are given to this script it is assumed that:")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
@@ -92,7 +92,8 @@ def main(argv):
         print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2")
         print("\t or: anaconda2 and anaconda3")
         print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
-        print("\t cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1\n")
+        print("\t cuda versions currently publicly available are: 7.0, 7.5, 8.0, 9.1 and 10.0 \n")
+        print("\t GPU cards currently available: P4, RTX2080Ti and V100\n")  
         sys.exit(2)
 
 
@@ -102,7 +103,7 @@ def main(argv):
     for opt, arg in opts:
         #print(opt, arg)
         if opt == '-h':
-            print("h2jupynb [-u <Hoffman2 user name>] [-t <time - integer number of hours>] [-m <memory - integer number of GB>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
+            print("h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB peer core>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
             sys.exit()
         elif opt in ("-u", "--user"):
             username = arg
@@ -131,7 +132,7 @@ def main(argv):
             if (parenv == 1):
                 parenv = 'shared'
             elif (parenv == 2):
-                parenv = 'dc*'
+                parenv = 'dc\*'
             else:
                 print("Setting the parallel environmen to shared...")
                 parenv = 1
@@ -180,7 +181,7 @@ def main(argv):
         elif opt in ("-l", "--cuda"):
             cudaver = arg
             cudaver = str(cudaver)
-            if (not cudaver == '7.0') and (not cudaver == '7.5') and (not cudaver == '8.0') and (not cudaver == '9.1'):
+            if (not cudaver == '7.0') and (not cudaver == '7.5') and (not cudaver == '8.0') and (not cudaver == '9.1') and (not cudaver == '10.0'):
                 print("version, ",cudaver,", not available")
                 print("setting cuda version to 9.1")
                 gpu = '9.1'            
@@ -216,7 +217,7 @@ def main(argv):
                 arch = ''
         else:
           print("Usage:\n")
-          print("h2jupynb [-u <Hoffman2 user name>] [-t <time - integer number of hours>] [-m <memory - integer number of GB>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
+          print("h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
           print("If no arguments are given to this script it is assumed that:")
           print("\t your Hoffman2 user name is the same as on your client machine")
           print("\t the time duration for your session is of 2 hours")
@@ -235,7 +236,8 @@ def main(argv):
           print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2")
           print("\t or: anaconda2 and anaconda3")
           print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
-          print("\t cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1\n")
+          print("\t cuda versions currently available are: 7.0, 7.5, 8.0, 9.1 and 10.0 \n")
+          print("\t GPU cards currently publicly available: P4, RTX2080Ti and V100\n")
           sys.exit(2)
             
     if not username:
