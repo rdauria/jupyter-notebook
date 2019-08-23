@@ -32,7 +32,7 @@ directory = ''
 directory = str(directory)
 opsys = platform.system()
 opsys = str(opsys)
-pythonver = '2.7.13'
+pythonver = 'python/2.7.13'
 pythonver = str(pythonver)
 usegpu = 'no'
 gpu = 'P4'
@@ -150,6 +150,8 @@ def main(argv):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 2.7.13")
                 pythonver = 'python/2.7.13'
+            if (pythonver == '2.7.3') or (pythonver == '2.7.13') or (pythonver == '2.7.16') or (pythonver == '3.4') or (pythonver == '3.6.1') or (pythonver == 'anaconda2') or (pythonver == '3.7.0') or (pythonver == '3.7.2') or (pythonver == 'anaconda3'):
+                pythonver = "python/"+pythonver
         elif opt in ("-p", "--port"):
             port = arg
             try:
