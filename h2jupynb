@@ -28,7 +28,7 @@ numberofslots = 1
 numberofslots = int(numberofslots)
 port = random.randrange(6222, 10000, 2)
 port = int(port)
-directory = ''
+directory = '~'
 directory = str(directory)
 opsys = platform.system()
 opsys = str(opsys)
@@ -267,7 +267,7 @@ def main(argv):
     print("The port is" , port)
     if (exclusive == 'yes'):
        print("Your Jupyter NB or lab will reserve a node exclusively ")
-    if not directory:
+    if (directory == '~'):
         print("The directory on Hoffman2 is $HOME")
     else:
         print("The directory on Hoffman2 is", directory)
@@ -301,7 +301,7 @@ elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
 MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
-
+CD_TEMP = "cd %s"
 
 if (pythonver == 'python/2.7.3'):
   STARTNBCMD = "ipython notebook"
@@ -313,9 +313,11 @@ def readwhile(stream,func):
     while True:
         line = stream.readline()
         if line!='':
-            #print(line[:-1]+"TEST"+func.__name__)
-            print(line[:-1])
-            if func(line): break
+          #if 'command not found' in line:
+          #  raise Exception("Please inform hpc@ucla.edu of a problem")
+          ##print(line[:-1]+"TEST"+func.__name__)
+          print(line[:-1])
+          if func(line): break
         else:
             raise Exception("Disconnected unexpectedly.")
 
@@ -360,6 +362,7 @@ if (usegpu == 'yes'):
    pqsub.stdin.write(MODULE_LOADCUDA_TEMP % (cudaver) +"\n")
 pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
 pqsub.stdin.write('module li\n')
+pqsub.stdin.write(CD_TEMP % (directory) +"\n")
 pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
 pqsub.stdin.flush()
 
@@ -375,10 +378,10 @@ if ('login' in hostname):
    print("We are on the wrong host. Exiting...")
    quit()
 
-if directory: 
-    pqsub.stdin.write('cd %s\n'%directory)
-    pqsub.stdin.write('echo CD\n')
-    readwhile(pqsub.stdout, lambda line: line.startswith('CD'))
+#if directory: 
+#    pqsub.stdin.write('cd %s\n'%directory)
+#    pqsub.stdin.write('echo CD\n')
+#    readwhile(pqsub.stdout, lambda line: line.startswith('CD'))
  
 def gethttpcommand(line):
     global httpcommand
@@ -387,7 +390,7 @@ def gethttpcommand(line):
        return True
 
 
-pqsub.stdin.write(STARTNBCMD + ' --port=%s\n'%port)
+pqsub.stdin.write(STARTNBCMD + ' --port=%s; echo exitcode: $?\n'%port)
 pqsub.stdin.flush()
 
 if (STARTNBCMD == 'jupyter notebook'):
