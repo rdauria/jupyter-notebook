@@ -254,7 +254,7 @@ def main(argv):
 
 
     print("Your Hoffman2 user name is", username )
-    print("Opening Jupyter", a_command)
+    #print("Opening Jupyter", a_command)
     print("The time in hours is", timeinhours )
     print("The memory in GB per slots is", memoryingb)
     if (numberofslots > 1):
@@ -308,16 +308,18 @@ MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
 CD_TEMP = "cd %s"
 
-print("HERE a_command IS= ",a_command)
+#print("HERE a_command IS= ",a_command)
 
-if (a_command == 'notebook'):
-  print("a_command= ",a_command)
-  STARTNBCMD = "jupyter notebook"
-else:
-  print("a_command= ",a_command)
-  STARTNBCMD = "jupyter lab"
+#if (a_command == 'notebook'):
+#  print("a_command= ",a_command)
+#  STARTNBCMD = "jupyter notebook"
+#else:
+#  print("a_command= ",a_command)
+#  STARTNBCMD = "jupyter lab"
 
-print('STARTNBCMD = ',STARTNBCMD)
+STARTNBCMD = "jupyter notebook"
+
+#print('STARTNBCMD = ',STARTNBCMD)
 
 def readwhile(stream,func):
     while True:
