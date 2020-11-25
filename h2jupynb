@@ -90,7 +90,8 @@ def main(argv):
         print("\t not running in exclusive mode")
         print("\t no specific CPU selected (see ARCH in qhost output)")
         print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2")
-        print("\t or: anaconda2, anaconda3 and anaconda/python3-4.2")
+        print("\t or: anaconda2, anaconda3, anaconda/python2-4.2, anaconda/python3-4.2," )
+	print("\t anaconda3/2019.03, anaconda3/2020.02")
         print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
         print("\t cuda versions currently publicly available are: 7.0, 7.5, 8.0, 9.1 and 10.0 \n")
         print("\t GPU cards currently available: P4, RTX2080Ti and V100\n")  
@@ -146,7 +147,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '2.7.16') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and (not pythonver == 'anaconda2') and (not pythonver == '3.6.1') and (not pythonver == '3.7.0') and (not pythonver == '3.7.2') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda/python2-4.2') and (not pythonver == 'anaconda/python3-4.2'):
+            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '2.7.16') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and (not pythonver == 'anaconda2') and (not pythonver == '3.6.1') and (not pythonver == '3.7.0') and (not pythonver == '3.7.2') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda/python2-4.2') and (not pythonver == 'anaconda/python3-4.2') and (not pythonver ==  'anaconda3/2019.03') and (not pythonver == 'anaconda3/2020.02'):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 2.7.13")
                 pythonver = 'python/2.7.13'

@@ -151,12 +151,16 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '3.7.3') and (not pythonver == 'anaconda3/2020.07'):
+            if (not pythonver == '3.7.3') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda3/2020.07'):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 3.7.3")
-                pythonver = 'python/2.7.13'
-            if (pythonver == '3.7.3') (pythonver == 'anaconda3'):
+                pythonver = 'python/3.7.3'
+            if (pythonver == '3.7.3'):
                 pythonver = "python/"+pythonver
+            elif (pythonver == 'anaconda3'):
+		pythonver = "anaconda3"
+	    elif (pythonver == 'anaconda3/2020.07'):
+                pythonver = "anaconda3/2020.07"
         elif opt in ("-p", "--port"):
             port = arg
             try:
