@@ -158,7 +158,7 @@ def main(argv):
             if (pythonver == '3.7.3'):
                 pythonver = "python/"+pythonver
             elif (pythonver == '3.9.6'):
-		pythonver = "python/"+pythonver
+                pythonver = "python/"+pythonver
             elif (pythonver == 'anaconda3'):
                 pythonver = "anaconda3"
             elif (pythonver == 'anaconda3/2020.07'):
