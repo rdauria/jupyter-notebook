@@ -32,7 +32,7 @@ directory = '~'
 directory = str(directory)
 opsys = platform.system()
 opsys = str(opsys)
-pythonver = 'python/3.7.3'
+pythonver = 'python/3.9.6'
 pythonver = str(pythonver)
 usegpu = 'no'
 gpu = 'RTX2080Ti'
@@ -82,7 +82,7 @@ def main(argv):
         print("\t the parallel environment is shared")
         print("\t the memory per slot for your session is of 1GB")
         print("\t the number of slots for your session is of 1")
-        print("\t the python version for your notebook is 3.7.3")
+        print("\t the python version for your notebook is 3.9.6")
         print("\t the port on which the server is started is 8789")
         print("\t the starting directory on Hoffman2 is your $HOME")
         print("\t use GPU? default is no")
@@ -153,8 +153,8 @@ def main(argv):
             pythonver = str(pythonver)
             if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda3/2020.07'):
                 print("version, ", pythonver,", of python not available")
-                print("setting python version to 3.7.3")
-                pythonver = 'python/3.7.3'
+                print("setting python version to 3.9.6")
+                pythonver = 'python/3.9.6'
             if (pythonver == '3.7.3'):
                 pythonver = "python/"+pythonver
             elif (pythonver == '2.7.18'):
@@ -240,7 +240,7 @@ def main(argv):
           print("\t the parallel environment is shared")
           print("\t the memory per slot for your session is of 1GB")
           print("\t the number of slots for your session is of 1")
-          print("\t the python version for your notebook is 3.7.3")
+          print("\t the python version for your notebook is 3.9.6")
           print("\t the port on which the server is started is 8789")
           print("\t the starting directory on Hoffman2 is your $HOME")
           print("\t use GPU? default is no")
