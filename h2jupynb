@@ -40,7 +40,7 @@ highp = 'no'
 cudaver = '10.2'
 exclusive = 'no'
 arch = ''
-ver_os = 'rh7'
+#ver_os = 'rh7'
 #a_command = 'notebook'
 
 #qrsh_error='no'
@@ -75,8 +75,8 @@ def main(argv):
         opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:l:o:x:a:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch="])
     except getopt.GetoptError:
         print("Usage:")
-        print("\n\t h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] [-e <parallel environment: 1 for shared, 2 for distributed >] [-s <number of slots>] [-v <python-version>] [-p <port>] [-g <yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] [-o <run on group owned nodes: yes/no>] [-d <path to directory from which the jupyter NB/lab will start>] [-x <run on an exclusively reserved node: yes/no>] [-a <CPU-type>]\n")
-        print("If no arguments are given to this script it is assumed that:")
+        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]\n")
+        print("If no arguments are given to this script it is assumed that:\n")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
         print("\t the parallel environment is shared")
@@ -90,11 +90,11 @@ def main(argv):
         print("\t CUDA version 10.2 (if -g yes)")
         print("\t not running on owned nodes")
         print("\t not running in exclusive mode")
-        print("\t no specific CPU selected (see ARCH in qhost -l rh7 output)")
-        print("\n\t python versions currently available are: 2.7.18, 3.7.3, 3.9.6")
-        print("\t or: anaconda3")
-        print("\t cuda versions currently publicly available are: 10.2, 11.0 \n")
-        print("\t GPU cards currently available: RTX2080Ti and V100\n")  
+        print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
+        print("\n\t python versions currently available are: 2.7.18, 3.7.3, 3.9.6, anaconda3")
+        print("\t cuda versions currently available are: 9.2, 10.0, 10.2, 11.0")
+        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+        print("\t **Should you specify non existing parameters default values will be assumed**\n")
         sys.exit(2)
 
 
@@ -103,8 +103,8 @@ def main(argv):
 
     for opt, arg in opts:
         #print(opt, arg)
-        if opt == '-h':
-            print("h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB peer core>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
+        if opt == "-h":
+            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]\n")
             sys.exit()
         elif opt in ("-u", "--user"):
             username = arg
@@ -189,10 +189,10 @@ def main(argv):
         elif opt in ("-c", "--gpu_card"):
             gpu = arg
             gpu = str(gpu)
-            if (not gpu == 'RTX2080Ti') and (not gpu == 'V100'):
+            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100'):
                 print("version, ",gpu,", of GPU not available")
                 print("setting GPU version to RTX2080Ti")
-                gpu = 'P4'
+                gpu = 'RTX2080Ti'
         elif opt in ("-l", "--cuda"):
             cudaver = arg
             cudaver = str(cudaver)
@@ -233,8 +233,8 @@ def main(argv):
                 arch = ''
         else:
           print("Usage:\n")
-          print("h2jupynb [-u <Hoffman2 user name>] [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]\n")
-          print("If no arguments are given to this script it is assumed that:")
+          print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]\n")
+          print("If no arguments are given to this script it is assumed that:\n")
           print("\t your Hoffman2 user name is the same as on your client machine")
           print("\t the time duration for your session is of 2 hours")
           print("\t the parallel environment is shared")
@@ -245,14 +245,14 @@ def main(argv):
           print("\t the starting directory on Hoffman2 is your $HOME")
           print("\t use GPU? default is no")
           print("\t GPU type default is RTX2080Ti (if -g yes)")
-          print("\t CUDA version 9.1 (if -g yes)")
+          print("\t CUDA version 10.2 (if -g yes)")
           print("\t not running on owned nodes")
           print("\t not running in exclusive mode")
-          print("\t no specific CPU selected (see ARCH in qhost -l rh7 output)")
-          print("\n\t python versions currently available are: 2.7.18, 3.7.3, 3.9.6")
-          print("\t or: anaconda3")
-          print("\t cuda versions currently available are: 10.2 \n")
-          print("\t GPU cards currently publicly available: RTX2080Ti and V100\n")
+          print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
+          print("\n\t python versions currently available are: 2.7.18, 3.7.3, 3.9.6, anaconda3")
+          print("\t cuda versions currently available are: 9.2, 10.0, 10.2, 11.0")
+          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+          print("\t **Should you specify non existing parameters default values will be assumed**\n")
           sys.exit(2)
             
     if not username:
@@ -298,21 +298,21 @@ print("usegpu= ",usegpu," highp= ",highp," exclusive= ",exclusive, "gputype= ",g
 
 if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
 #   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe dc\* %d")
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG%s -pe %s %d")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG%s -pe %s %d -now n")
 elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
 elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
 elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,highp,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp,exclusive%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
 MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
 CD_TEMP = "cd %s"
