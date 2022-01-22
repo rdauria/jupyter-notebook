@@ -1,9 +1,38 @@
 #!/usr/bin/env python
-from __future__ import print_function
-"""In order to use the script you need to copy your SSH key to the target server
-and also copy the server SSH public key (usually .ssh/id_rsa.pub) to .ssh/authorized_keys, 
-so that the computing node can ssh passwordless to the login node"""
+###
+# This script allows users to start a jupyter notebooks/labs session
+# running on the UCLA Hoffman2 Cluster while displaying it on their
+# local browser. 
+#
+# Users download this script on their local machine and run it on a local
+# terminal via:
+#
+# python3 h2jupynb -u $H2-USERNAME [other options]
+# 
+# ***The script prompts the users twice for their Hoffman2 password***
+#
+#
+# To see a full list of current available options:
+#
+# python3 h2jupynb --help
+#
+# See also:
+#
+# https://www.hoffman2.idre.ucla.edu/Using-H2/Connecting/Connecting.html#connecting-via-jupyter-notebook-lab
+#
+# For questions open a ticket on:
+# 
+# https://support.idre.ucla.edu/helpdesk/Tickets/New?categoryId=390006
+# 
+# or file an issue or discussion on:
+#
+# https://github.com/rdauria/jupyter-notebook
+#
+# Author: RD (hpc@ucla.edu) / Adapted from: https://github.com/pyHPC/ipynbhpc
+#
+###
 
+from __future__ import print_function
 from subprocess import Popen, PIPE, call
 import sys
 import webbrowser
