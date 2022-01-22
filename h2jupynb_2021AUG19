@@ -32,16 +32,14 @@ directory = '~'
 directory = str(directory)
 opsys = platform.system()
 opsys = str(opsys)
-pythonver = 'python/3.7.3'
+pythonver = 'python/2.7.13'
 pythonver = str(pythonver)
 usegpu = 'no'
-gpu = 'RTX2080Ti'
+gpu = 'P4'
 highp = 'no'
-cudaver = '10.2'
+cudaver = '9.1'
 exclusive = 'no'
 arch = ''
-ver_os = 'rh7'
-#a_command = 'notebook'
 
 #qrsh_error='no'
 
@@ -82,19 +80,21 @@ def main(argv):
         print("\t the parallel environment is shared")
         print("\t the memory per slot for your session is of 1GB")
         print("\t the number of slots for your session is of 1")
-        print("\t the python version for your notebook is 3.7.3")
+        print("\t the python version for your notebook is 2.7.13")
         print("\t the port on which the server is started is 8789")
         print("\t the starting directory on Hoffman2 is your $HOME")
         print("\t use GPU? default is no")
-        print("\t GPU type default is RTX2080Ti (if -g yes)")
-        print("\t CUDA version 10.2 (if -g yes)")
+        print("\t GPU type default is P4 (if -g yes)")
+        print("\t CUDA version 9.1 (if -g yes)")
         print("\t not running on owned nodes")
         print("\t not running in exclusive mode")
-        print("\t no specific CPU selected (see ARCH in qhost -l rh7 output)")
-        print("\n\t python versions currently available are: 3.7.3, 3.9.6")
-        print("\t or: anaconda3")
-        print("\t cuda versions currently publicly available are: 10.2, 11.0 \n")
-        print("\t GPU cards currently available: RTX2080Ti and V100\n")  
+        print("\t no specific CPU selected (see ARCH in qhost output)")
+        print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2, 3.9.6")
+        print("\t or: anaconda2, anaconda3, anaconda/python2-4.2, anaconda/python3-4.2," )
+        print("\t anaconda3/2019.03, anaconda3/2020.02")
+        print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
+        print("\t cuda versions currently publicly available are: 7.0, 7.5, 8.0, 9.1 and 10.0 \n")
+        print("\t GPU cards currently available: P4, RTX2080Ti and V100\n")  
         sys.exit(2)
 
 
@@ -109,10 +109,6 @@ def main(argv):
         elif opt in ("-u", "--user"):
             username = arg
             username = str(username)
-        elif opt in ("-a", "--app"):
-            a_command = arg
-            a_command = str(a_command)
-            print("A_command= ",a_command)
         elif opt in ("-t", "--time"):
             timeinhours = arg
             try:
@@ -151,18 +147,12 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda3/2020.07'):
+            if (not pythonver == '2.7.3') and (not pythonver == '2.7.13') and (not pythonver == '2.7.16') and (not pythonver == '3.4') and (not pythonver == '3.6.1') and  (not pythonver == '3.9.6') and (not pythonver == 'anaconda2') and (not pythonver == '3.6.1') and (not pythonver == '3.7.0') and (not pythonver == '3.7.2') and (not pythonver == 'anaconda3') and (not pythonver == 'anaconda/python2-4.2') and (not pythonver == 'anaconda/python3-4.2') and (not pythonver ==  'anaconda3/2019.03') and (not pythonver == 'anaconda3/2020.02'):
                 print("version, ", pythonver,", of python not available")
-                print("setting python version to 3.7.3")
-                pythonver = 'python/3.7.3'
-            if (pythonver == '3.7.3'):
+                print("setting python version to 2.7.13")
+                pythonver = 'python/2.7.13'
+            if (pythonver == '2.7.3') or (pythonver == '2.7.13') or (pythonver == '2.7.16') or (pythonver == '3.4') or (pythonver == '3.6.1') or (pythonver == 'anaconda2') or (pythonver == '3.7.0') or (pythonver == '3.7.2') or (pythonver == '3.9.6') or (pythonver == 'anaconda3'):
                 pythonver = "python/"+pythonver
-            elif (pythonver == '3.9.6'):
-		pythonver = "python/"+pythonver
-            elif (pythonver == 'anaconda3'):
-                pythonver = "anaconda3"
-            elif (pythonver == 'anaconda3/2020.07'):
-                pythonver = "anaconda3/2020.07"
         elif opt in ("-p", "--port"):
             port = arg
             try:
@@ -187,18 +177,18 @@ def main(argv):
         elif opt in ("-c", "--gpu_card"):
             gpu = arg
             gpu = str(gpu)
-            if (not gpu == 'RTX2080Ti') and (not gpu == 'V100'):
+            if (not gpu == 'P4') and (not gpu == 'K40') and (not gpu == 'GTX1080Ti') and (not gpu == 'RTX2080Ti') and (not gpu == 'V100'):
                 print("version, ",gpu,", of GPU not available")
-                print("setting GPU version to RTX2080Ti")
+                print("setting GPU version to P4")
                 gpu = 'P4'
         elif opt in ("-l", "--cuda"):
             cudaver = arg
             cudaver = str(cudaver)
-            if (not cudaver == '10.2') and (not cudaver == '11.0'):
+            if (not cudaver == '7.0') and (not cudaver == '7.5') and (not cudaver == '8.0') and (not cudaver == '9.1') and (not cudaver == '10.0'):
                 print("version, ",cudaver,", not available")
-                print("setting cuda version to 10.2")
+                print("setting cuda version to 9.1")
                 #gpu = '9.1'            
-                cudaver = '10.2'
+		cudaver = '9.1'
         elif opt in ("-o", "--highp"):
             highp = arg
             highp = str(highp)
@@ -238,19 +228,20 @@ def main(argv):
           print("\t the parallel environment is shared")
           print("\t the memory per slot for your session is of 1GB")
           print("\t the number of slots for your session is of 1")
-          print("\t the python version for your notebook is 3.7.3")
+          print("\t the python version for your notebook is 2.7.13")
           print("\t the port on which the server is started is 8789")
           print("\t the starting directory on Hoffman2 is your $HOME")
           print("\t use GPU? default is no")
-          print("\t GPU type default is RTX2080Ti (if -g yes)")
+          print("\t GPU type default is P4 (if -g yes)")
           print("\t CUDA version 9.1 (if -g yes)")
           print("\t not running on owned nodes")
           print("\t not running in exclusive mode")
-          print("\t no specific CPU selected (see ARCH in qhost -l rh7 output)")
-          print("\n\t python versions currently available are: 3.7.3, 3.9.6")
-          print("\t or: anaconda3")
-          print("\t cuda versions currently available are: 10.2 \n")
-          print("\t GPU cards currently publicly available: RTX2080Ti and V100\n")
+          print("\t no specific CPU selected (see ARCH in qhost output)")
+          print("\n\t python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2, 3.9.6")
+          print("\t or: anaconda2, anaconda3 and anaconda/python3-4.2")
+          print("\t python versions: 2.7.3 or 3.4 are available but deprecated.\n")
+          print("\t cuda versions currently available are: 7.0, 7.5, 8.0, 9.1 and 10.0 \n")
+          print("\t GPU cards currently publicly available: P4, RTX2080Ti and V100\n")
           sys.exit(2)
             
     if not username:
@@ -261,7 +252,6 @@ def main(argv):
 
 
     print("Your Hoffman2 user name is", username )
-    #print("Opening Jupyter", a_command)
     print("The time in hours is", timeinhours )
     print("The memory in GB per slots is", memoryingb)
     if (numberofslots > 1):
@@ -296,37 +286,30 @@ print("usegpu= ",usegpu," highp= ",highp," exclusive= ",exclusive, "gputype= ",g
 
 if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
 #   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe dc\* %d")
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG%s -pe %s %d")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe %s %d")
 elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
 elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
 elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,highp,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp,exclusive%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l rh7,h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
 MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
 CD_TEMP = "cd %s"
 
-#print("HERE a_command IS= ",a_command)
+if (pythonver == 'python/2.7.3'):
+  STARTNBCMD = "ipython notebook"
+else:
+  STARTNBCMD = "jupyter notebook"
 
-#if (a_command == 'notebook'):
-#  print("a_command= ",a_command)
-#  STARTNBCMD = "jupyter notebook"
-#else:
-#  print("a_command= ",a_command)
-#  STARTNBCMD = "jupyter lab"
-
-STARTNBCMD = "jupyter notebook"
-
-#print('STARTNBCMD = ',STARTNBCMD)
 
 def readwhile(stream,func):
     while True:
