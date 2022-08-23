@@ -43,6 +43,7 @@ import platform
 import random
 from datetime import datetime
 import sys, getopt
+import signal
 
 random.seed(datetime.now().strftime("%S"))
 
@@ -69,12 +70,6 @@ highp = 'no'
 cudaver = '10.2'
 exclusive = 'no'
 arch = ''
-#ver_os = 'rh7'
-#a_command = 'notebook'
-
-#qrsh_error='no'
-
-#print("ARGV      :", sys.argv[1:])
 
 
 if sys.version_info<(2,6,0):
@@ -292,7 +287,6 @@ def main(argv):
 
 
     print("Your Hoffman2 user name is", username )
-    #print("Opening Jupyter", a_command)
     print("The time in hours is", timeinhours )
     print("The memory in GB per slots is", memoryingb)
     if (numberofslots > 1):
@@ -346,26 +340,16 @@ MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
 CD_TEMP = "cd %s"
 
-#print("HERE a_command IS= ",a_command)
 
-#if (a_command == 'notebook'):
-#  print("a_command= ",a_command)
-#  STARTNBCMD = "jupyter notebook"
-#else:
-#  print("a_command= ",a_command)
-#  STARTNBCMD = "jupyter lab"
 
 STARTNBCMD = "jupyter notebook"
 
-#print('STARTNBCMD = ',STARTNBCMD)
+print('STARTNBCMD = ',STARTNBCMD)
 
 def readwhile(stream,func):
     while True:
         line = stream.readline()
         if line!='':
-          #if 'command not found' in line:
-          #  raise Exception("Please inform hpc@ucla.edu of a problem")
-          ##print(line[:-1]+"TEST"+func.__name__)
           print(line[:-1])
           if func(line): break
         else:
@@ -376,36 +360,11 @@ pqsub.stdin.flush()
 pqsub.stdout.flush()
 
 
-#
-#if (usegpu == 'no') and (highp == 'no'): 
-#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
-#elif (usegpu == 'no') and (highp == 'yes'):
-#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
-#elif (usegpu == 'yes') and (highp == 'no'):
-#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
-#elif (usegpu == 'yes') and (highp == 'yes'):
-#   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n")
-#
 if (usegpu == 'no'):
    pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
 elif (usegpu == 'yes'):
    pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n") 
 
-
-# check for error on qrsh --- WE CAN GET error: no suitable queues b/c of -w e: 
-#def getqrsherror(line):
-#    global qrsh_error
-#    if (line.find('error: no suitable queues')>0):
-#       qrsh_error = 'yes'
-#       return True
-#
-#readwhile(pqsub.stdout, getqrsherror)
-##readwhile(pqsub.stdout, lambda line: line.find('error: no suitable queues')>0)
-#if (qrsh_error == 'yes'):
-#    print('The combination of resources requested is ivalid please try again...')
-#    pqsub.kill()
-#    #raise SystemExit
-#else:
 
 
 if (usegpu == 'yes'):
@@ -428,33 +387,33 @@ if ('login' in hostname):
    print("We are on the wrong host. Exiting...")
    quit()
 
-#if directory: 
-#    pqsub.stdin.write('cd %s\n'%directory)
-#    pqsub.stdin.write('echo CD\n')
-#    readwhile(pqsub.stdout, lambda line: line.startswith('CD'))
  
 def gethttpcommand(line):
     global httpcommand
-    if (line.find('localhost')>0):
+    if (line.find('http://%s:%s/?token='%(hostname,port))>0):
        httpcommand = line.split(' ')[-1].strip()
        return True
 
 
-pqsub.stdin.write(STARTNBCMD + ' --port=%s; echo exitcode: $?\n'%port)
+pqsub.stdin.write(STARTNBCMD + ' --ip=0.0.0.0 --port=%s; echo exitcode: $?\n'%port)
 pqsub.stdin.flush()
 
-if (STARTNBCMD == 'jupyter notebook'):
-  #readwhile(pqsub.stdout, lambda line: line.find('localhost')>0)
-  #print("\n\tUse the token above to log into your notebook as needed\n")
-  readwhile(pqsub.stdout, gethttpcommand)
-  print("\n\t", httpcommand, "\n")
-else:
-  readwhile(pqsub.stdout, lambda line: line.find('NotebookApp')>0)
 
+if (STARTNBCMD == 'jupyter notebook'):
+  readwhile(pqsub.stdout, gethttpcommand)
+else:
+  readwhile(pqsub.stdout, lambda line: line.find('http://%s:%s/?token='%(hostname,port))>0)
+
+print("httpcommand=",httpcommand)  
+  
+token = httpcommand.split("=")[-1]
+
+newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
+
+print("httpcommand=",newhttpcommand)  
+  
 if myssh == 'ssh':
-    tunnel = ['ssh','-4', '-t', '-Y', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-Y', hostname, '-L', '%s:localhost:%s'%(port,port)]
-elif myssh == 'plink':
-    tunnel = ['plink','-4', '-t', '-X', '%s@hoffman2.idre.ucla.edu' % username, '-L', '%s:localhost:%s'%(port,port), 'ssh', '-t', '-X', hostname, '-L', '%s:localhost:%s'%(port,port)]
+    tunnel = ['ssh','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
 
 print(' '.join(tunnel))
 
@@ -467,24 +426,35 @@ readwhile(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
 
 if ('CYGWIN' in opsys) or ('Cygwin' in opsys) or ('cygwin' in opsys):
    if (STARTNBCMD == 'jupyter notebook'):
-     call(["cygstart",httpcommand])
+     call(["cygstart",newhttpcommand])
    else:
      call(["cygstart",'http://localhost:%s'%(port)])
 else:
    if (STARTNBCMD == 'jupyter notebook'):
-     webbrowser.open(httpcommand)
+     webbrowser.open(newhttpcommand)
    else:
      webbrowser.open('http://localhost:%s'%(port))
 
 print("Succesfully opened notebook!")
 print("Kill this process to end your notebook connection.")
 
+
+def handler(signum, frame):
+    res = print("Detected Ctrl-c. Exiting...")
+    pqsub.kill()
+    ptunnel.kill()
+    print("Succesfully cleaned up connections.")
+    exit(1)
+ 
+signal.signal(signal.SIGINT, handler)
+
+
 time.sleep(timeinhours*3600)
 
 pqsub.kill()
 ptunnel.kill()
 
-
+print("Elapsted runtime. Terminating...")
 print("Succesfully cleaned up connections.")
 
 
