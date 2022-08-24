@@ -355,7 +355,7 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-pqsub=Popen(['ssh','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+pqsub=Popen(['ssh','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 pqsub.stdin.flush()
 pqsub.stdout.flush()
 
@@ -390,19 +390,19 @@ if ('login' in hostname):
  
 def gethttpcommand(line):
     global httpcommand
-    if (line.find('http://%s:%s/?token='%(hostname,port))>0):
+    if (line.find('http://%s:%s/'%(hostname,port))>0):
        httpcommand = line.split(' ')[-1].strip()
        return True
 
 
-pqsub.stdin.write(STARTNBCMD + ' --ip=0.0.0.0 --port=%s; echo exitcode: $?\n'%port)
+pqsub.stdin.write(STARTNBCMD + ' --no-browser --ip=0.0.0.0 --port=%s; echo exitcode: $?\n'%port)
 pqsub.stdin.flush()
 
 
 if (STARTNBCMD == 'jupyter notebook'):
   readwhile(pqsub.stdout, gethttpcommand)
 else:
-  readwhile(pqsub.stdout, lambda line: line.find('http://%s:%s/?token='%(hostname,port))>0)
+  readwhile(pqsub.stdout, lambda line: line.find('http://%s:%s/'%(hostname,port))>0)
 
 print("httpcommand=",httpcommand)  
   
