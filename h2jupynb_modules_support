@@ -1,0 +1,531 @@
+#!/usr/bin/env python
+###
+# This script allows users to start a jupyter notebooks/labs session
+# running on the UCLA Hoffman2 Cluster while displaying it on their
+# local browser. 
+#
+# Users download this script on their local machine and run it on a local
+# terminal via:
+#
+# python3 h2jupynb -u $H2-USERNAME [other options]
+# 
+# ***The script prompts the users twice for their Hoffman2 password***
+#
+#
+# To see a full list of current available options:
+#
+# python3 h2jupynb --help
+#
+# See also:
+#
+# https://www.hoffman2.idre.ucla.edu/Using-H2/Connecting/Connecting.html#connecting-via-jupyter-notebook-lab
+#
+# For questions open a ticket on:
+# 
+# https://support.idre.ucla.edu/helpdesk/Tickets/New?categoryId=390006
+# 
+# or file an issue or discussion on:
+#
+# https://github.com/rdauria/jupyter-notebook
+#
+# Author: RD (hpc@ucla.edu) / Adapted from: https://github.com/pyHPC/ipynbhpc
+#
+###
+
+from __future__ import print_function
+from subprocess import Popen, PIPE, call
+import sys
+import webbrowser
+from getopt import getopt
+import time
+import os
+import platform
+import random
+from datetime import datetime
+import sys, getopt
+import signal
+
+random.seed(datetime.now().strftime("%S"))
+
+username = ''
+username = str(username)
+timeinhours = 2
+timeinhours = int(timeinhours)
+memoryingb = 1
+memoryingb = int(memoryingb) 
+parenv = 'shared'
+numberofslots = 1
+numberofslots = int(numberofslots)
+port = random.randrange(6222, 10000, 2)
+port = int(port)
+directory = '~'
+directory = str(directory)
+opsys = platform.system()
+opsys = str(opsys)
+pythonver = 'python/3.9.6'
+pythonver = str(pythonver)
+usegpu = 'no'
+gpu = ''
+highp = 'no'
+cudaver = '10.2'
+exclusive = 'no'
+arch = ''
+mods = ''
+lofmods = ''
+modstoload = ''
+cve = ''
+pve = ''
+
+
+if sys.version_info<(2,6,0):
+  sys.stderr.write("You need python 2.6 or later to run this script\n")
+  exit(1)
+
+
+if opsys == 'Windows':
+    try:
+        ret=call(['where','ssh.exe'])
+	#mytest = 'MINGW' in os.environ['MSYSTEM']
+    except:
+        print("It appears that Git for Windows is not installed")
+        print("or that you are not running this script from its")
+        print("Git BASH terminal. Please install either Git for")
+        print("Windows, availabe at: ")
+        print("https://git-for-windows.github.io/")
+        print("and run this script from its git BASH.")
+        sys.exit(2)
+
+myssh = 'ssh'
+
+
+def main(argv):
+    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, cudaver, highp, exclusive, arch, parenv, mods, cve, pve, lofmods, modstoload
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:l:o:x:a:b:j:k:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-virt-env="])
+    except getopt.GetoptError:
+        print("Usage:")
+        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
+        print("If no arguments are given to this script it is assumed that:\n")
+        print("\t your Hoffman2 user name is the same as on your client machine")
+        print("\t the time duration for your session is of 2 hours")
+        print("\t the parallel environment is shared")
+        print("\t the memory per slot for your session is of 1GB")
+        print("\t the number of slots for your session is of 1")
+        print("\t the python version for your notebook is 3.9.6")
+        print("\t the port on which the server is started is 8789")
+        print("\t the starting directory on Hoffman2 is your $HOME")
+        print("\t use GPU? default is no")
+        print("\t GPU type default is RTX2080Ti (if -g yes)")
+        print("\t CUDA version 10.2 (if -g yes)")
+        print("\t not running on owned nodes")
+        print("\t not running in exclusive mode")
+        print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
+        print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
+        print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
+        print("\t anaconda3/2022.05\n")
+        print("\t Architectures (CPUs) currently publicly available: see output of qhost")
+        print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
+        print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
+        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+        print("\t Environmental modules to be loaded as a comma (no space) list")
+        print("\t (e.g.:gsl/2.6, or gsl,curl/7.70.0)\n")
+        print("\t Conda virtual environment - assumes a version of anaconda3 is requested")
+        print("\t (e.g.:treemix)\n")
+        print("\t Python virtual environment - assumes a version of python (not anaconda3)")
+        print("\t is requested (e.g.: \$HOME/PATH/TO/MYPYTHONENV)\n")
+        print("\t **Should you specify non existing parameters default values will be assumed**\n")
+        sys.exit(2)
+
+
+    #print('OPTIONS   :', opts)
+
+
+    for opt, arg in opts:
+        #print(opt, arg)
+        if opt == "-h":
+            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
+            sys.exit()
+        elif opt in ("-u", "--user"):
+            username = arg
+            username = str(username)
+        elif opt in ("-w", "--what"):
+            a_command = arg
+            a_command = str(a_command)
+            print("A_command= ",a_command)
+        elif opt in ("-t", "--time"):
+            timeinhours = arg
+            try:
+                timeinhours=int(timeinhours)
+            except exceptions.KeyError:
+                print("Setting the time to 2 hours...")
+                timeinhours = 2
+        elif opt in ("-m", "--memory"):
+            memoryingb = arg
+            try:
+                memoryingb=int(memoryingb)
+            except exceptions.KeyError:
+                print("Setting the memory to 1GB...")
+                memoryingb = 1
+        elif opt in ("-e", "--parallel-environment"):
+            parenv = arg
+            try:
+                parenv=int(parenv)
+            except exceptions.KeyError:
+                print("Setting the parallel environmen to shared...")
+                parenv = 1
+            if (parenv == 1):
+                parenv = 'shared'
+            elif (parenv == 2):
+                parenv = 'dc\*'
+            else:
+                print("Setting the parallel environmen to shared...")
+                parenv = 1
+        elif opt in ("-s", "--slots"):
+            numberofslots = arg
+            try:
+                numberofslots=int(numberofslots)
+            except exceptions.KeyError:
+                print("Setting the number of slots to 1...")
+                numberofslots = 1
+        elif opt in ("-v", "--version"):
+            pythonver = arg
+            pythonver = str(pythonver)
+            if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05'):
+                print("version, ", pythonver,", of python not available")
+                print("setting python version to 3.9.6")
+                pythonver = 'python/3.9.6'
+            if (pythonver == '3.7.3'):
+                pythonver = "python/"+pythonver
+            elif (pythonver == '2.7.18'):
+                pythonver = "python/"+pythonver
+            elif (pythonver == '3.9.6'):
+                pythonver = "python/"+pythonver
+            elif (pythonver == 'anaconda3/2020.07'):
+                pythonver = "anaconda3/2020.07"
+            elif (pythonver == 'anaconda3'):
+                pythonver = "anaconda3"
+            elif (pythonver == 'anaconda3/2020.11'):
+                pythonver = "anaconda3/2020.11"
+            elif (pythonver == 'anaconda3/2021.11'):
+                pythonver = "anaconda3/2021.11"
+            elif (pythonver == 'anaconda3/2022.05'):
+                pythonver = "anaconda3/2022.05"
+        elif opt in ("-p", "--port"):
+            port = arg
+            try:
+                port=int(port)
+            except exceptions.KeyError:
+                print("Setting the port to 2 8789...")
+                port = 8789
+        elif opt in ("-d", "--dir"):
+            directory = arg
+            directory = str(directory)
+        elif opt in ("-g", "--usegpu"):
+            usegpu = arg
+            usegpu = str(usegpu)
+            if ( usegpu == 'NO') or (usegpu == 'No') or (usegpu == 'no') or (usegpu == 'nO') or (usegpu == 'N') or (usegpu == 'n'):
+                print("Jupyter notebook or lab will not run on a GPU node")
+                usegpu = 'no'
+            elif (usegpu == 'Yes') or (usegpu == 'yes') or (usegpu == 'YES') or (usegpu == 'Y') or (usegpu == 'y'):
+                print("Jupyter notebook or lab will run on a GPU node")
+                usegpu='yes'
+            else:
+                print("USEGPU=",usegpu)
+        elif opt in ("-c", "--gpu_card"):
+            gpu = arg
+            gpu = str(gpu)
+            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100'):
+                print("version, ",gpu,", of GPU not available")
+                print("setting GPU version to RTX2080Ti")
+                gpu = 'RTX2080Ti'
+        elif opt in ("-l", "--cuda"):
+            cudaver = arg
+            cudaver = str(cudaver)
+            if (not cudaver == '10.2') and (not cudaver == '11.0'):
+                print("version, ",cudaver,", not available")
+                print("setting cuda version to 10.2")
+                #gpu = '9.1'            
+                cudaver = '10.2'
+        elif opt in ("-o", "--highp"):
+            highp = arg
+            highp = str(highp)
+            print("HIGHP= ",highp)
+            if ( highp == 'NO') or (highp == 'No') or (highp == 'no') or (highp == 'nO') or (highp == 'N') or (highp == 'n'): 
+                print("HIGHP= ",highp," Jupyter notebook or lab will not run on owned node(s)")
+                highp = 'no'
+            elif ( highp == 'Yes') or ( highp == 'yes') or ( highp == 'YES') or ( highp == 'Y') or ( highp == 'y'):
+                print("HIGHP= ",highp," Jupyter notebook or lab will run on owned node(s)")
+                highp='yes'
+        elif opt in ("-x", "--exclusive"):
+            exclusive = arg
+            #print("EXCL= ",exclusive)
+            exclusive = str(exclusive)
+            print("EXCL= ",exclusive)
+            if ( exclusive == 'NO') or (exclusive == 'No') or (exclusive == 'no') or (exclusive == 'nO') or (exclusive == 'N') or (exclusive == 'n'):
+                print("Jupyter notebook or lab will not run in exclusive mode")
+                exclusive = 'no'
+            elif (exclusive == 'Yes') or (exclusive == 'yes') or (exclusive == 'YES') or (exclusive == 'Y') or (exclusive == 'y'):
+                print("Jupyter notebook or lab will run in exclusive mode")
+                exclusive='yes'
+            else:
+                print("EXCLUSIVE=",exclusive)
+        elif opt in ("-a", "--arch"):
+            arch = arg
+            arch = str(arch)
+            if (not arch == 'amd-23540') and (not arch == 'amd-2376') and (not arch == 'amd-2380') and (not arch == 'amd-2382') and (not arch == 'amd-2384') and (not arch == 'amd-2431') and (not arch == 'amd-2435') and (not arch == 'amd-4176') and (not arch == 'amd-6136') and  (not arch == 'amd-6276') and (not arch == 'i-E5-2670v3') and  (not arch == 'intel-E5-2650') and (not arch == 'intel-E5-2670') and (not arch == 'intel-E5-2697') and (not arch == 'intel-E5-4620') and (not arch == 'intel-E5530') and (not arch == 'intel-E5540') and (not arch == 'intel-E7-8890') and (not arch == 'intel-gold-51') and (not arch == 'intel-gold-61') and (not arch == 'intel-X5550') and (not arch == 'intel-X5560') and (not arch == 'intel-X5650') and (not arch == 'lx-amd64') and (not arch == 'intel\\*') and (not arch == 'intel-gold\\*'):
+                print("version, ",arch,", of CPU not available")
+                print("no CPU-type will be requested")
+                arch = ''
+        elif opt in ("-b", "--modules"):
+            mods = arg
+            mods = str(mods)
+            lofmods=mods.split(",")
+            for l in lofmods:
+              if ( modstoload == '' ):
+                modstoload="module load " + l
+              else:
+                modstoload=modstoload + "; module load " + l
+        elif opt in ("-j", "--conda-virt-env"):
+            cve = arg
+            cve = str(cve)
+            print("cve=",cve)
+        elif opt in ("-k", "--python-virt-env"):
+            pve = arg
+            pve = str(pve)
+            print("pve=",pve)
+        else:
+          print("Usage:\n")
+          print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
+          print("If no arguments are given to this script it is assumed that:\n")
+          print("\t your Hoffman2 user name is the same as on your client machine")
+          print("\t the time duration for your session is of 2 hours")
+          print("\t the parallel environment is shared")
+          print("\t the memory per slot for your session is of 1GB")
+          print("\t the number of slots for your session is of 1")
+          print("\t the python version for your notebook is 3.9.6")
+          print("\t the port on which the server is started is 8789")
+          print("\t the starting directory on Hoffman2 is your $HOME")
+          print("\t use GPU? default is no")
+          print("\t GPU type default is RTX2080Ti (if -g yes)")
+          print("\t CUDA version 10.2 (if -g yes)")
+          print("\t not running on owned nodes")
+          print("\t not running in exclusive mode")
+          print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
+          print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
+          print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
+          print("\t anaconda3/2022.05\n")
+          print("\t Architectures (CPUs) currently publicly available: see output of qhost")
+          print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
+          print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
+          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+          print("\t Environmental modules to be loaded as a comma (no space) list")
+          print("\t (e.g.: gsl/2.6, or gsl,curl/7.70.0)\n")
+          print("\t Conda virtual environment - assumes a version of anaconda3 is requested")
+          print("\t (e.g.: treemix)\n")
+          print("\t Python virtual environment - assumes a version of python (not anaconda3)")
+          print("\t is requested (e.g.: \$HOME/PATH/TO/MYPYTHONENV)\n")
+          print("\t **Should you specify non existing parameters default values will be assumed**\n")
+          sys.exit(2)
+            
+    if not username:
+        if opsys == 'Windows':
+           username = str(os.environ["USERNAME"])
+        else:
+           username = str(os.environ["USER"])
+
+
+    print("Your Hoffman2 user name is", username )
+    print("The time in hours is", timeinhours )
+    print("The memory in GB per slots is", memoryingb)
+    if (numberofslots > 1):
+      print("The parallel environment is", parenv)
+      print("The number of slots is", numberofslots)
+    print("The version of python for the notebook is", pythonver)
+    if (usegpu == 'no') and (highp == 'yes'):
+      print("Your Jupyter NB or lab will run on owned resources")
+    elif (usegpu == 'yes') and (highp == 'no'):
+      print("Your Jupyter NB or lab will run on a GPU node")
+      print("Your Jupyter NB or lab will load cuda version ",cudaver)
+      if (gputype != ''):
+        print("Your Jupyter NB or lab will run on GPU card ",gputype)
+    elif (usegpu == 'yes') and (highp == 'yes'):
+      print("Your Jupyter NB or lab will run on a GPU owned node")  
+      print("Your Jupyter NB or lab will load cuda version ",cudaver)
+      if (gputype != ''):
+        print("Your Jupyter NB or lab will run on GPU card ",gputype)
+    print("The port is" , port)
+    if (exclusive == 'yes'):
+      print("Your Jupyter NB or lab will reserve a node exclusively ")
+    if (directory == '~'):
+      print("The directory on Hoffman2 is $HOME")
+    else:
+      print("The directory on Hoffman2 is", directory)
+    if (arch != ''):
+      print("Your Jupyter NB or lab will run on ",arch," CPU")
+    if (mods != ''):
+      print("Your Jupyter NB or lab will load these environmental modules ",mods)
+      #for l in lofmods:
+      #  print("MODS=",l)
+    if (cve != ''):
+      print("Your Jupyter NB or lab will load this conda virtual environment ",cve)  
+    if (pve != ''):
+      print("Your Jupyter NB or lab will load this python virtual environment ",pve)  
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
+
+print("usegpu= ",usegpu,"; highp= ",highp,"; exclusive= ",exclusive, "; gputype= ",gpu, "; arch= ",arch, "; time= ",timeinhours, "; mem= ",memoryingb, "; PE= ", parenv, "; NSLOTS= ",numberofslots)
+
+if ( arch != '' ):
+  arch=',arch='+arch
+
+if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
+#   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe dc\* %d")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG%s -pe %s %d -now n")
+elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
+elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
+elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
+elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s -pe %s %d -w e")
+elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp%s -pe %s %d -w e")
+elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,highp,exclusive%s -pe %s %d -w e")
+elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s,exclusive%s -pe %s %d -w e")
+MODULE_LOADCUDA_TEMP = "module load cuda/%s"
+MODULE_LOAD_TEMP = "module load %s"
+CONDA_ACTIVATE = "conda activate %s"
+PYTHON_ACTIVATE= "source %s/bin/activate"
+CD_TEMP = "cd %s"
+
+
+
+STARTNBCMD = "jupyter notebook"
+
+print('STARTNBCMD = ',STARTNBCMD)
+
+def readwhile(stream,func):
+    while True:
+        line = stream.readline()
+        if line!='':
+          print(line[:-1])
+          if func(line): break
+        else:
+            raise Exception("Disconnected unexpectedly.")
+
+pqsub=Popen(['ssh','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+pqsub.stdin.flush()
+pqsub.stdout.flush()
+
+
+if (usegpu == 'no'):
+   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+elif (usegpu == 'yes'):
+   pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,arch,parenv,numberofslots))+"\n") 
+
+
+
+if (usegpu == 'yes'):
+  pqsub.stdin.write(MODULE_LOADCUDA_TEMP % (cudaver) +"\n")
+if (mods != ''):
+  pqsub.stdin.write(modstoload +"\n")
+pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
+if (cve != ''):
+  pqsub.stdin.write(CONDA_ACTIVATE % (cve) +"\n")
+if (pve != ''):
+  pqsub.stdin.write(PYTHON_ACTIVATE % (pve) +"\n")
+pqsub.stdin.write('module li\n')
+pqsub.stdin.write(CD_TEMP % (directory) +"\n")
+pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
+pqsub.stdin.flush()
+
+def gethostname(line):
+    global hostname
+    if line.startswith('HOSTNAME'):
+        hostname = line.split('=')[1].strip()
+        return True
+
+readwhile(pqsub.stdout, gethostname)
+
+if ('login' in hostname):
+   print("We are on the wrong host. Exiting...")
+   quit()
+
+ 
+def gethttpcommand(line):
+    global httpcommand
+    if (line.find('http://%s:%s/'%(hostname,port))>0):
+       httpcommand = line.split(' ')[-1].strip()
+       return True
+
+
+pqsub.stdin.write(STARTNBCMD + ' --no-browser --ip=0.0.0.0 --port=%s; echo exitcode: $?\n'%port)
+pqsub.stdin.flush()
+
+
+if (STARTNBCMD == 'jupyter notebook'):
+  readwhile(pqsub.stdout, gethttpcommand)
+else:
+  readwhile(pqsub.stdout, lambda line: line.find('http://%s:%s/'%(hostname,port))>0)
+
+print("httpcommand=",httpcommand)  
+  
+token = httpcommand.split("=")[-1]
+
+newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
+
+print("httpcommand=",newhttpcommand)  
+  
+if myssh == 'ssh':
+    tunnel = ['ssh','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
+
+print(' '.join(tunnel))
+
+ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,universal_newlines=True)
+ptunnel.stdin.write('echo TUNNEL\n')
+ptunnel.stdin.flush()
+
+
+readwhile(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
+
+if ('CYGWIN' in opsys) or ('Cygwin' in opsys) or ('cygwin' in opsys):
+   if (STARTNBCMD == 'jupyter notebook'):
+     call(["cygstart",newhttpcommand])
+   else:
+     call(["cygstart",'http://localhost:%s'%(port)])
+else:
+   if (STARTNBCMD == 'jupyter notebook'):
+     webbrowser.open(newhttpcommand)
+   else:
+     webbrowser.open('http://localhost:%s'%(port))
+
+print("Succesfully opened notebook!")
+print("Kill this process to end your notebook connection.")
+
+
+def handler(signum, frame):
+    res = print("Detected Ctrl-c. Exiting...")
+    pqsub.kill()
+    ptunnel.kill()
+    print("Succesfully cleaned up connections.")
+    exit(1)
+ 
+signal.signal(signal.SIGINT, handler)
+
+
+time.sleep(timeinhours*3600)
+
+pqsub.kill()
+ptunnel.kill()
+
+print("Elapsted runtime. Terminating...")
+print("Succesfully cleaned up connections.")
+
+
+
+
+
