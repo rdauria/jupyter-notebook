@@ -2,7 +2,12 @@
 ###
 # This script allows users to start a jupyter notebooks/labs session
 # running on the UCLA Hoffman2 Cluster while displaying it on their
-# local browser. 
+# local browser.
+#
+# THIS PARTICULAR VERSION IS MEANT FOR DEBUGGING OF SSH SUDDEN INTERRUPTIONS
+# TWO FILES (myssh.log and mytunnel.log) ARE CREATED. THE FILES CAN GET VERY
+# LARGE AND SHOULD BE DELETED IF NO SSH INTERRUPTION OCCURS, IF DISCONNECTION
+# OCCURS THE FILE SHOULD BE SENT TO hpc@ucla.edu FOR DEBUGGING PURPOSES
 #
 # Users download this script on their local machine and run it on a local
 # terminal via:
