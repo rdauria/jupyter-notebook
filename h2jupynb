@@ -11,7 +11,6 @@
 # 
 # ***The script prompts the users twice for their Hoffman2 password***
 #
-#
 # To see a full list of current available options:
 #
 # python3 h2jupynb --help
