@@ -75,6 +75,7 @@ lofmods = ''
 modstoload = ''
 cve = ''
 pve = ''
+gputype = ''
 
 
 if sys.version_info<(2,6,0):
