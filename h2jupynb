@@ -273,7 +273,7 @@ def main(argv):
         elif opt in ("-a", "--arch"):
             arch = arg
             arch = str(arch)
-            if ( not arch == 'amd-epyc-7642' ) and ( not arch == 'intel-E5-2650' ) and ( not arch == 'intel-E5-2650v2' ) and ( not arch == 'intel-E5-2650v4' ) and ( not arch == 'intel-E5-2670' ) and ( not arch == 'intel-E5-2670v2' ) and ( not arch == 'intel-E5-2670v3' ) and ( not arch == 'intel-E5-2697Av4' ) and ( not arch == 'intel-E5-4620v2' ) and ( not arch == 'intel-E7-8890v4' ) and ( not arch == 'intel-gold-5118' ) and ( not arch == 'intel-gold-5218' ) and ( not arch == 'intel-gold-6140' ) and ( not arch == 'intel-gold-6240' ) and ( not arch == 'lx-amd64' ) and (not arch == 'intel\\*') and (not arch == 'intel-gold\\*'):	
+            if ( not arch == 'amd-epyc-7642' ) and ( not arch == 'intel-E5-2650' ) and ( not arch == 'intel-E5-2650v2' ) and ( not arch == 'intel-E5-2650v4' ) and ( not arch == 'intel-E5-2670' ) and ( not arch == 'intel-E5-2670v2' ) and ( not arch == 'intel-E5-2670v3' ) and ( not arch == 'intel-E5-2697Av4' ) and ( not arch == 'intel-E5-4620v2' ) and ( not arch == 'intel-E7-8890v4' ) and ( not arch == 'intel-gold-5118' ) and ( not arch == 'intel-gold-5218' ) and ( not arch == 'intel-gold-6140' ) and ( not arch == 'intel-gold-6240' ) and ( not arch == 'lx-amd64' ) and (not arch == 'intel\\*') and (not arch == 'intel-gold\\*'):
                 print("version, ",arch,", of CPU not available")
                 print("no CPU-type will be requested")
                 arch = ''
