@@ -1,4 +1,4 @@
-# h2jupynb: Jupyter notebook launcher script for the Hoffman2 cluster
+# h2jupynb: Jupyter notebook launcher script for the Hoffman2 Cluster
 
 *Jupiter notebook, formerly known as IPython notebook*
 
