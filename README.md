@@ -25,29 +25,54 @@ You will get:
 ```
 Usage:
 
-h2jupynb [-u <Hoffman2 user name>] [-t <time - integer number of hours>] [-m <memory - integer number of GB>] [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] [-v <python-version>] [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  [-a <CPU-type>] [-d <directory from which the jupyter NB/lab will start>] [-p <port number>] [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>]
+h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] 
+         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] 
+         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] 
+         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  
+         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] 
+         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] 
+         [-p <port number>]  [-j <conda virtual environment name>]
+         [-k <path/to/python/virtual-env>] 
+         [-b <comma separated list of environmental modules>]
 
 If no arguments are given to this script it is assumed that:
+
 	 your Hoffman2 user name is the same as on your client machine
 	 the time duration for your session is of 2 hours
 	 the parallel environment is shared
 	 the memory per slot for your session is of 1GB
 	 the number of slots for your session is of 1
-	 the python version for your notebook is 2.7.13
+	 the python version for your notebook is 3.9.6
 	 the port on which the server is started is 8789
 	 the starting directory on Hoffman2 is your $HOME
 	 use GPU? default is no
-	 GPU type default is P4 (if -g = yes)
-	 CUDA version 9.1 (if -g = yes)
+	 GPU type default is RTX2080Ti (if -g yes)
+	 CUDA version 10.2 (if -g yes)
 	 not running on owned nodes
 	 not running in exclusive mode
-	 no specific CPU selected (see ARCH in qhost output)
+	 no specific CPU selected (see "ARCH" in output of "qhost")
 
-	 python versions currently available are: 2.7.13, 2.7.16, 3.6.1, 3.7.0, 3.7.2
-	 or: anaconda2 and anaconda3
-	 python versions: 2.7.3 or 3.4 are available but deprecated.
+	 Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,
+	 anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,
+	 anaconda3/2022.05, anaconda3/2023.03 
 
-	 cuda versions currently available are: 7.0, 7.5, 8.0 and 9.1
+	 Architectures (CPUs) currently publicly available: see output of qhost
+	 to request a specific architecture, e.g., intel-gold*: -a intel-gold\\*
+
+	 Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0
+
+	 GPU cards currently publicly available are: P4, RTX2080Ti, V100
+
+	 Environmental modules to be loaded as a comma (no space) list
+	 (e.g.: gsl/2.6, or gsl,curl/7.70.0)
+
+	 Conda virtual environment - assumes a version of anaconda3 is requested
+	 (e.g.: treemix)
+
+	 Python virtual environment - assumes a version of python (not anaconda3)
+	 is requested (e.g.: \$HOME/PATH/TO/MYPYTHONENV)
+
+	 **Should you specify non existing parameters default values will be assumed**
 
 ```
 	 
