@@ -517,8 +517,21 @@ def handler(signum, frame):
  
 signal.signal(signal.SIGINT, handler)
 
+#ptunnel.stdin.write('echo TESTTESTTESTTEST#############')
+#ptunnel.stdin.flush()
+#print(repr(ptunnel.stdout.readline()))
+#readwhile(ptunnel.stdout, lambda line: line.startswith('TESTTESTTESTTEST#############')>0)
 
-time.sleep(timeinhours*3600)
+for i in xrange(timeinhours*3600,0,-1):
+    sys.stdout.write(str(i)+' ')
+    sys.stdout.flush()
+    #ptunnel.stdin.write('echo T')
+    #ptunnel.stdin.flush()
+    #print(repr(ptunnel.stdout.readline()))
+    time.sleep(1)
+
+#time.sleep(timeinhours*3600)
+
 
 pqsub.kill()
 ptunnel.kill()
