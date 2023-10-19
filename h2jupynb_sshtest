@@ -418,7 +418,7 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-pqsub=Popen(['ssh','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
 pqsub.stdin.flush()
 pqsub.stdout.flush()
 
@@ -482,7 +482,7 @@ newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
 print("httpcommand=",newhttpcommand)  
   
 if myssh == 'ssh':
-    tunnel = ['ssh','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
+    tunnel = ['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','mytunnel.log','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
 
 print(' '.join(tunnel))
 
