@@ -47,7 +47,6 @@ import signal
 
 random.seed(datetime.now().strftime("%S"))
 
-script_version=3.0
 username = ''
 username = str(username)
 timeinhours = 2
@@ -77,7 +76,6 @@ modstoload = ''
 cve = ''
 pve = ''
 gputype = ''
-sshlogs= 'no'
 
 
 if sys.version_info<(2,6,0):
@@ -98,15 +96,16 @@ if opsys == 'Windows':
         print("and run this script from its git BASH.")
         sys.exit(2)
 
+myssh = 'ssh'
 
 
 def main(argv):
-    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, cudaver, highp, exclusive, arch, parenv, mods, cve, pve, lofmods, modstoload, sshlogs
+    global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, cudaver, highp, exclusive, arch, parenv, mods, cve, pve, lofmods, modstoload
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"h:u:t:m:e:s:v:p:d:g:c:l:o:x:a:b:j:k:z:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-venv-path=","ssh-debug-files="])
+        opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:l:o:x:a:b:j:k:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-virt-env="])
     except getopt.GetoptError:
         print("Usage:")
-        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?:yes/no>]\n")
+        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
         print("If no arguments are given to this script it is assumed that:\n")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
@@ -142,12 +141,10 @@ def main(argv):
     #print('OPTIONS   :', opts)
 
 
-    print("h2jupynb version ",script_version)
-    
     for opt, arg in opts:
         #print(opt, arg)
         if opt == "-h":
-            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?:yes/no>]\n")
+            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
             sys.exit()
         elif opt in ("-u", "--user"):
             username = arg
@@ -253,9 +250,9 @@ def main(argv):
         elif opt in ("-o", "--highp"):
             highp = arg
             highp = str(highp)
-            #print("HIGHP= ",highp)
+            print("HIGHP= ",highp)
             if ( highp == 'NO') or (highp == 'No') or (highp == 'no') or (highp == 'nO') or (highp == 'N') or (highp == 'n'): 
-                print("HIGHP= ",highp," Jupyter notebook or lab will *not* run on owned node(s)")
+                print("HIGHP= ",highp," Jupyter notebook or lab will not run on owned node(s)")
                 highp = 'no'
             elif ( highp == 'Yes') or ( highp == 'yes') or ( highp == 'YES') or ( highp == 'Y') or ( highp == 'y'):
                 print("HIGHP= ",highp," Jupyter notebook or lab will run on owned node(s)")
@@ -264,7 +261,7 @@ def main(argv):
             exclusive = arg
             #print("EXCL= ",exclusive)
             exclusive = str(exclusive)
-            #print("EXCL= ",exclusive)
+            print("EXCL= ",exclusive)
             if ( exclusive == 'NO') or (exclusive == 'No') or (exclusive == 'no') or (exclusive == 'nO') or (exclusive == 'N') or (exclusive == 'n'):
                 print("Jupyter notebook or lab will not run in exclusive mode")
                 exclusive = 'no'
@@ -293,22 +290,13 @@ def main(argv):
             cve = arg
             cve = str(cve)
             print("cve=",cve)
-        elif opt in ("-k", "--python-venv-path"):
+        elif opt in ("-k", "--python-virt-env"):
             pve = arg
             pve = str(pve)
             print("pve=",pve)
-	elif opt in ("-z", "--ssh-debug-files"):
-            sshlogs = arg
-            sshlogs = str(sshlogs)
-            if ( sshlogs == 'NO') or (sshlogs == 'No') or (sshlogs == 'no') or (sshlogs == 'nO') or (sshlogs == 'N') or (sshlogs == 'n'): 
-                print("SSHLOGS= ",sshlogs," SSH logfiles will not be written.")
-                sshlogs = 'no'
-            elif ( sshlogs == 'Yes') or ( sshlogs == 'yes') or ( sshlogs == 'YES') or ( sshlogs == 'Y') or ( sshlogs == 'y'):
-                print("SSHLOGS= ",sshlogs," SSH logfiles will be written.")
-                sshlogs='yes'
         else:
           print("Usage:\n")
-          print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?:yes/no>]\n")
+          print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n")
           print("If no arguments are given to this script it is assumed that:\n")
           print("\t your Hoffman2 user name is the same as on your client machine")
           print("\t the time duration for your session is of 2 hours")
@@ -382,14 +370,12 @@ def main(argv):
     if (cve != ''):
       print("Your Jupyter NB or lab will load this conda virtual environment ",cve)  
     if (pve != ''):
-      print("Your Jupyter NB or lab will load this python virtual environment ",pve)
-    if (sshlogs != ''):
-      print("SSH log files will be written ",sshlogs)
+      print("Your Jupyter NB or lab will load this python virtual environment ",pve)  
 
 if __name__ == "__main__":
    main(sys.argv[1:])
 
-print("usegpu= ",usegpu,"; highp= ",highp,"; exclusive= ",exclusive, "; gputype= ",gpu, "; arch= ",arch, "; time= ",timeinhours, "; mem= ",memoryingb, "; PE= ", parenv, "; NSLOTS= ",numberofslots,"sshlogs",sshlogs)
+print("usegpu= ",usegpu,"; highp= ",highp,"; exclusive= ",exclusive, "; gputype= ",gpu, "; arch= ",arch, "; time= ",timeinhours, "; mem= ",memoryingb, "; PE= ", parenv, "; NSLOTS= ",numberofslots)
 
 if ( arch != '' ):
   arch=',arch='+arch
@@ -432,16 +418,9 @@ def readwhile(stream,func):
         else:
             raise Exception("Disconnected unexpectedly.")
 
-
-if (sshlogs == 'no'):          
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-  pqsub.stdin.flush()
-  pqsub.stdout.flush()
-if (sshlogs == 'yes'):          
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
-  pqsub.stdin.flush()
-  pqsub.stdout.flush()
-
+pqsub=Popen(['ssh','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+pqsub.stdin.flush()
+pqsub.stdout.flush()
 
 
 if (usegpu == 'no'):
@@ -502,11 +481,8 @@ newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
 
 print("httpcommand=",newhttpcommand)  
   
-
-if (sshlogs == 'no'): 
-  tunnel = ['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
-if (sshlogs == 'yes'):
-  tunnel = ['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','mytunnel.log','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
+if myssh == 'ssh':
+    tunnel = ['ssh','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
 
 print(' '.join(tunnel))
 
@@ -541,21 +517,8 @@ def handler(signum, frame):
  
 signal.signal(signal.SIGINT, handler)
 
-#ptunnel.stdin.write('echo TESTTESTTESTTEST#############')
-#ptunnel.stdin.flush()
-#print(repr(ptunnel.stdout.readline()))
-#readwhile(ptunnel.stdout, lambda line: line.startswith('TESTTESTTESTTEST#############')>0)
 
-for i in xrange(timeinhours*3600,0,-10):
-    sys.stdout.write(str(i)+' ')
-    sys.stdout.flush()
-    #ptunnel.stdin.write('echo T')
-    #ptunnel.stdin.flush()
-    #print(repr(ptunnel.stdout.readline()))
-    time.sleep(10)
-
-#time.sleep(timeinhours*3600)
-
+time.sleep(timeinhours*3600)
 
 pqsub.kill()
 ptunnel.kill()
