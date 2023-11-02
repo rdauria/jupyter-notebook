@@ -546,7 +546,18 @@ signal.signal(signal.SIGINT, handler)
 #print(repr(ptunnel.stdout.readline()))
 #readwhile(ptunnel.stdout, lambda line: line.startswith('TESTTESTTESTTEST#############')>0)
 
-for i in xrange(timeinhours*3600,0,-10):
+pver=sys.version_info[0]
+
+if pver == 2:
+ for i in xrange(timeinhours*3600,0,-10):
+    sys.stdout.write(str(i)+' ')
+    sys.stdout.flush()
+    #ptunnel.stdin.write('echo T')
+    #ptunnel.stdin.flush()
+    #print(repr(ptunnel.stdout.readline()))
+    time.sleep(10)
+elif pver == 3:
+ for i in range(timeinhours*3600,0,-10):
     sys.stdout.write(str(i)+' ')
     sys.stdout.flush()
     #ptunnel.stdin.write('echo T')
