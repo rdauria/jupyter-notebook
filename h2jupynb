@@ -297,7 +297,7 @@ def main(argv):
             pve = arg
             pve = str(pve)
             print("pve=",pve)
-	elif opt in ("-z", "--ssh-debug-files"):
+        elif opt in ("-z", "--ssh-debug-files"):
             sshlogs = arg
             sshlogs = str(sshlogs)
             if ( sshlogs == 'NO') or (sshlogs == 'No') or (sshlogs == 'no') or (sshlogs == 'nO') or (sshlogs == 'N') or (sshlogs == 'n'): 
