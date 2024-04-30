@@ -106,7 +106,7 @@ def main(argv):
         opts, args = getopt.getopt(sys.argv[1:],"h:u:t:m:e:s:v:p:d:g:c:l:o:x:a:b:j:k:z:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu=","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-venv-path=","ssh-debug-files="])
     except getopt.GetoptError:
         print("Usage:")
-        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?:yes/no>]\n")
+        print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?: yes/no>]\n")
         print("If no arguments are given to this script it is assumed that:\n")
         print("\t your Hoffman2 user name is the same as on your client machine")
         print("\t the time duration for your session is of 2 hours")
@@ -124,17 +124,17 @@ def main(argv):
         print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
         print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
         print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
-        print("\t anaconda3/2022.05, anaconda3/2023.03\n")
+        print("\t anaconda3/2022.05, anaconda3/2023.03, mamba\n")
         print("\t Architectures (CPUs) currently publicly available: see output of qhost")
         print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
         print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
-        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100\n")
         print("\t Environmental modules to be loaded as a comma (no space) list")
         print("\t (e.g.:gsl/2.6, or gsl,curl/7.70.0)\n")
-        print("\t Conda virtual environment - assumes a version of anaconda3 is requested")
+        print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
         print("\t (e.g.:treemix)\n")
-        print("\t Python virtual environment - assumes a version of python (not anaconda3)")
-        print("\t is requested (e.g.: \$HOME/PATH/TO/MYPYTHONENV)\n")
+        print("\t Python virtual environment - assumes a version of python (not anaconda3/mamba)")
+        print('\t is requested (e.g.: $HOME/PATH/TO/MYPYTHONENV)\n')
         print("\t **Should you specify non existing parameters default values will be assumed**\n")
         sys.exit(2)
 
@@ -147,7 +147,7 @@ def main(argv):
     for opt, arg in opts:
         #print(opt, arg)
         if opt == "-h":
-            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?:yes/no>]\n")
+            print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-l <cuda-version>] \n         [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?: yes/no>]\n")
             sys.exit()
         elif opt in ("-u", "--user"):
             username = arg
@@ -180,7 +180,7 @@ def main(argv):
             if (parenv == 1):
                 parenv = 'shared'
             elif (parenv == 2):
-                parenv = 'dc\*'
+                parenv = 'dc\\*'
             else:
                 print("Setting the parallel environmen to shared...")
                 parenv = 1
@@ -194,7 +194,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3'):
+            if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba'):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 3.9.6")
                 pythonver = 'python/3.9.6'
@@ -214,6 +214,10 @@ def main(argv):
                 pythonver = "anaconda3/2021.11"
             elif (pythonver == 'anaconda3/2022.05'):
                 pythonver = "anaconda3/2022.05"
+            elif (pythonver == 'anaconda3/2023.03'):
+                pythonver = "anaconda3/2023.03"
+            elif (pythonver == 'mamba'):
+                pythonver = "mamba"
         elif opt in ("-p", "--port"):
             port = arg
             try:
@@ -238,7 +242,7 @@ def main(argv):
         elif opt in ("-c", "--gpu_card"):
             gpu = arg
             gpu = str(gpu)
-            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100'):
+            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100') and (not gpu == 'A100'):
                 print("version, ",gpu,", of GPU not available")
                 print("setting GPU version to RTX2080Ti")
                 gpu = 'RTX2080Ti'
@@ -326,17 +330,17 @@ def main(argv):
           print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
           print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
           print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
-          print("\t anaconda3/2022.05, anaconda3/2023.03 \n")
+          print("\t anaconda3/2022.05, anaconda3/2023.03, mamba\n")
           print("\t Architectures (CPUs) currently publicly available: see output of qhost")
           print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
           print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
-          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100\n")
+          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100\n")
           print("\t Environmental modules to be loaded as a comma (no space) list")
           print("\t (e.g.: gsl/2.6, or gsl,curl/7.70.0)\n")
-          print("\t Conda virtual environment - assumes a version of anaconda3 is requested")
+          print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
           print("\t (e.g.: treemix)\n")
-          print("\t Python virtual environment - assumes a version of python (not anaconda3)")
-          print("\t is requested (e.g.: \$HOME/PATH/TO/MYPYTHONENV)\n")
+          print("\t Python virtual environment - assumes a version of python (not anaconda3/mamba)")
+          print('\t is requested (e.g.: $HOME/PATH/TO/MYPYTHONENV)\n')
           print("\t **Should you specify non existing parameters default values will be assumed**\n")
           sys.exit(2)
             
@@ -474,7 +478,18 @@ def gethostname(line):
 readwhile(pqsub.stdout, gethostname)
 
 if ('login' in hostname):
-   print("We are on the wrong host. Exiting...")
+   print("\n ############################################")
+   print(" ******We seem to be on the wrong host!******")
+   print(" Most likely the Jupyter session cannot start")
+   print(" because the interactive session cannot be   ")
+   print(" allocated. Please open a ticket at:         ")
+   print(" https://support.idre.ucla.edu/helpdesk      ")
+   print(" providing the exact command you used to     ")
+   print(" start the session. Copying and pasting the  ")
+   print(" output of your terminal from the issuing of ")
+   print(" the h2jupynb command will expedite matters. ")
+   print(" Exiting...                                  ")
+   print(" #############################################\n")
    quit()
 
  
