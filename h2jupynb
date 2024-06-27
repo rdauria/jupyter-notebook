@@ -128,7 +128,7 @@ def main(argv):
         print("\t Architectures (CPUs) currently publicly available: see output of qhost")
         print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
         print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
-        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100\n")
+        print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100, A6000\n")
         print("\t Environmental modules to be loaded as a comma (no space) list")
         print("\t (e.g.:gsl/2.6, or gsl,curl/7.70.0)\n")
         print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
@@ -242,7 +242,7 @@ def main(argv):
         elif opt in ("-c", "--gpu_card"):
             gpu = arg
             gpu = str(gpu)
-            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100') and (not gpu == 'A100'):
+            if (not gpu == 'RTX2080Ti') and (not gpu == 'P4') and (not gpu == 'V100') and (not gpu == 'A100') and (not gpu == 'A6000') :
                 print("version, ",gpu,", of GPU not available")
                 print("setting GPU version to RTX2080Ti")
                 gpu = 'RTX2080Ti'
@@ -334,7 +334,7 @@ def main(argv):
           print("\t Architectures (CPUs) currently publicly available: see output of qhost")
           print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
           print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
-          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100\n")
+          print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100, A6000\n")
           print("\t Environmental modules to be loaded as a comma (no space) list")
           print("\t (e.g.: gsl/2.6, or gsl,curl/7.70.0)\n")
           print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
