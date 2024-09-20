@@ -124,10 +124,10 @@ def main(argv):
         print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
         print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
         print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
-        print("\t anaconda3/2022.05, anaconda3/2023.03, mamba\n")
+        print("\t anaconda3/2022.05, anaconda3/2023.03, mamba/1.4.2, mamba/1.5.5\n")
         print("\t Architectures (CPUs) currently publicly available: see output of qhost")
         print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
-        print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
+        print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.7, 11.8, 12.3\n")
         print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100, A6000\n")
         print("\t Environmental modules to be loaded as a comma (no space) list")
         print("\t (e.g.:gsl/2.6, or gsl,curl/7.70.0)\n")
@@ -194,7 +194,7 @@ def main(argv):
         elif opt in ("-v", "--version"):
             pythonver = arg
             pythonver = str(pythonver)
-            if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba'):
+            if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba'):
                 print("version, ", pythonver,", of python not available")
                 print("setting python version to 3.9.6")
                 pythonver = 'python/3.9.6'
@@ -249,7 +249,7 @@ def main(argv):
         elif opt in ("-l", "--cuda"):
             cudaver = arg
             cudaver = str(cudaver)
-            if (not cudaver == '10.2') and (not cudaver == '11.0'):
+            if (not cudaver == '9.2') and (not cudaver == '10.0') and (not cudaver == '10.2') and (not cudaver == '11.0') and (not cudaver == '11.7') and (not cudaver == '11.8') and (not cudaver == '12.3') and (not cudaver == '12.4'):
                 print("version, ",cudaver,", not available")
                 print("setting cuda version to 10.2")
                 #gpu = '9.1'            
@@ -330,10 +330,10 @@ def main(argv):
           print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
           print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6,")
           print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
-          print("\t anaconda3/2022.05, anaconda3/2023.03, mamba\n")
+          print("\t anaconda3/2022.05, anaconda3/2023.03, mamba/1.4.2, mamba/1.5.5\n")
           print("\t Architectures (CPUs) currently publicly available: see output of qhost")
           print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
-          print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0\n")
+          print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.7, 11.8, 12.3\n")
           print("\t GPU cards currently publicly available are: P4, RTX2080Ti, V100, A100, A6000\n")
           print("\t Environmental modules to be loaded as a comma (no space) list")
           print("\t (e.g.: gsl/2.6, or gsl,curl/7.70.0)\n")
