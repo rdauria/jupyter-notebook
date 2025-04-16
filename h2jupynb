@@ -44,6 +44,7 @@ import random
 from datetime import datetime
 import sys, getopt
 import signal
+import time
 
 random.seed(datetime.now().strftime("%S"))
 
@@ -52,7 +53,7 @@ username = ''
 username = str(username)
 timeinhours = 2
 timeinhours = int(timeinhours)
-memoryingb = 1
+memoryingb = 5
 memoryingb = int(memoryingb) 
 parenv = 'shared'
 numberofslots = 1
@@ -79,8 +80,10 @@ pve = ''
 #gputype = ''
 gpumem = ''
 sshlogs= 'no'
+gccver= ''
 
 print("h2jupynb version ",script_version)
+print()
 
 if sys.version_info<(2,6,0):
   sys.stderr.write("You need python 2.6 or later to run this script\n")
@@ -108,26 +111,26 @@ def usage():
   print("\t your Hoffman2 user name is the same as on your client machine")
   print("\t the time duration for your session is of 2 hours")
   print("\t the parallel environment is shared")
-  print("\t the memory per slot for your session is of 1GB")
+  print("\t the memory per slot for your session is of 5GB")
   print("\t the number of slots for your session is of 1")
   print("\t the python version for your notebook is 3.9.6")
   print("\t the port on which the server is started is 8789")
   print("\t the starting directory on Hoffman2 is your $HOME")
   print("\t use GPU? default is no")
-  print("\t GPU type default is RTX2080Ti (if -g yes)")
+  print("\t GPU type default is ANY AVAILABLE (if -g yes)")
   print("\t GPU memory (if -g yes) not specified")
-  print("\t CUDA version 10.2 (if -g yes)")
+  print("\t CUDA version 11.3 (if -g yes)")
   print("\t not running on owned nodes")
   print("\t not running in exclusive mode")
   print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
   print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6, 3.11.5,")
-  print("\t anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
+  print("\t 3.11.12, 3.12.9, anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
   print("\t anaconda3/2022.05, anaconda3/2023.03, mamba/1.4.2, mamba/1.5.5\n")
   print("\t Architectures (CPUs) currently publicly available: see output of qhost")
   print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
-  print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.7, 11.8, 12.3\n")
+  print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.3, 11.7, 11.8, 12.3\n")
   print("\t GPU cards currently available are: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100\n")
-  print("\t GPU memory currently available are (in GB): 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000), 96 (H100)\n")
+  print("\t GPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000), 96 (H100)\n")
   print("\t Environmental modules to be loaded as a comma (no space) list (e.g.:gsl/2.6,")
   print("\t or gsl,curl/7.70.0)\n")
   print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
@@ -135,20 +138,23 @@ def usage():
   print("\t Python virtual environment - assumes a version of python (not anaconda3/mamba)")
   print('\t is requested (e.g.: $HOME/PATH/TO/MYPYTHONENV)\n')
   print("\t **Should you specify non existing parameters default values will be assumed**\n")
+  print("\t Some combinations of requestable options may not be possible, and may lead to")
+  print("\t excessive wait times, you may want to connect to the cluster via terminal and")
+  print("\t review the output of the commands:\n")
+  print("\t `qhost` and/or `GPU_NODES_AT_A_GLANCE_WITH_USED_GPUs`\n")
   sys.exit(2)
 
     
 def main(argv):
-  global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, gpumem, cudaver, highp, exclusive, arch, parenv, mods, cve, pve, lofmods, modstoload, sshlogs
+  global  username, timeinhours, memoryingb, numberofslots, pythonver, port, directory, usegpu, gpu, gpumem, cudaver, highp, exclusive, arch, parenv, mods, cve, pve, lofmods, modstoload, sshlogs, gccver
   try:
-    opts, args = getopt.getopt(sys.argv[1:],"h:u:t:m:e:s:v:p:d:g:c:r:l:o:x:a:b:j:k:z:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu_card=","gpu_mem","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-venv-path=","ssh-debug-files="])
+    opts, args = getopt.getopt(sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:r:l:o:x:a:b:j:k:z:",["help","username=","timeinhours=","memoryingn=","parallel-enviromnment=","numberofslots=","pythonver=","port=","dir=","usegpu=","gpu_card=","gpu_mem","cudaver=","highp=","exclusive=","arch=","modules=","conda-virt-env=","python-venv-path=","ssh-debug-files="])
   except getopt.GetoptError:
     usage() 
   for opt, arg in opts:
     #print(opt, arg)
-    if opt in ("-h", "--help"):
+    if opt in ("-h ", "--help"):
       usage()
-      #print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>]  [-r <gpu-global-memory>] \n         [-l <cuda-version>] [-p <port number>]  [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-z <write ssh debug files?: yes/no>]\n")
       sys.exit()
     elif opt in ("-u", "--user"):
       username = arg
@@ -161,22 +167,22 @@ def main(argv):
       timeinhours = arg
       try:
         timeinhours=int(timeinhours)
-      except exceptions.KeyError:
-        print("Setting the time to 2 hours...")
+      except ValueError:
+        print("The time entered is not in a valid format. Setting the time to 2 hours...")
         timeinhours = 2
     elif opt in ("-m", "--memory"):
       memoryingb = arg
       try:
         memoryingb=int(memoryingb)
-      except exceptions.KeyError:
-        print("Setting the memory to 1GB...")
-        memoryingb = 1
+      except ValueError:
+        print("The memory entered is not in a valid format. Setting the memory to 5GB per computing core...")
+        memoryingb = 5
     elif opt in ("-e", "--parallel-environment"):
       parenv = arg
       try:
         parenv=int(parenv)
-      except exceptions.KeyError:
-        print("Setting the parallel environmen to shared...")
+      except ValueError:
+        print("The parallel environment requested is invalid. Setting the parallel environmen to shared...")
         parenv = 1
         if (parenv == 1):
           parenv = 'shared'
@@ -189,48 +195,55 @@ def main(argv):
       numberofslots = arg
       try:
         numberofslots=int(numberofslots)
-      except exceptions.KeyError:
-        print("Setting the number of slots to 1...")
+      except ValueError:
+        print("The requested number of computing cores (or slots) is invalid. Setting the number of slots to 1...")
         numberofslots = 1
     elif opt in ("-v", "--version"):
       pythonver = arg
       pythonver = str(pythonver)
-      if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == '3.11.5') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba'):
+      if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == '3.11.5') and (not pythonver == '3.11.12')  and (not pythonver == '3.12.9') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba'):
         print("version, ", pythonver,", of python not available")
         print("setting python version to 3.9.6")
         pythonver = 'python/3.9.6'
-        if (pythonver == '3.7.3'):
-          pythonver = "python/"+pythonver
-        elif (pythonver == '2.7.18'):
-          pythonver = "python/"+pythonver
-        elif (pythonver == '3.9.6'):
-          pythonver = "python/"+pythonver
-        elif (pythonver == '3.11.5'):
-          pythonver = "python/"+pythonver
-        elif (pythonver == 'anaconda3/2020.07'):
-          pythonver = "anaconda3/2020.07"
-        elif (pythonver == 'anaconda3'):
-          pythonver = "anaconda3"
-        elif (pythonver == 'anaconda3/2020.11'):
-          pythonver = "anaconda3/2020.11"
-        elif (pythonver == 'anaconda3/2021.11'):
-          pythonver = "anaconda3/2021.11"
-        elif (pythonver == 'anaconda3/2022.05'):
-          pythonver = "anaconda3/2022.05"
-        elif (pythonver == 'anaconda3/2023.03'):
-          pythonver = "anaconda3/2023.03"
-        elif (pythonver == 'mamba/1.4.2'):
-          pythonver = "mamba/1.4.2"
-        elif (pythonver == 'mamba/1.5.5'):
-          pythonver = "mamba/1.5.5"
-        elif (pythonver == 'mamba'):
-          pythonver = "mamba"
+      if (pythonver == '3.7.3'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '2.7.18'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.9.6'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.11.5'):
+        gccver = "gcc/7.5.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.11.12'):
+        gccver = "gcc/11.3.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.12.9'):
+        gccver = "gcc/11.3.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == 'anaconda3/2020.07'):
+        pythonver = "anaconda3/2020.07"
+      elif (pythonver == 'anaconda3'):
+        pythonver = "anaconda3"
+      elif (pythonver == 'anaconda3/2020.11'):
+        pythonver = "anaconda3/2020.11"
+      elif (pythonver == 'anaconda3/2021.11'):
+        pythonver = "anaconda3/2021.11"
+      elif (pythonver == 'anaconda3/2022.05'):
+        pythonver = "anaconda3/2022.05"
+      elif (pythonver == 'anaconda3/2023.03'):
+        pythonver = "anaconda3/2023.03"
+      elif (pythonver == 'mamba/1.4.2'):
+        pythonver = "mamba/1.4.2"
+      elif (pythonver == 'mamba/1.5.5'):
+        pythonver = "mamba/1.5.5"
+      elif (pythonver == 'mamba'):
+        pythonver = "mamba"
     elif opt in ("-p", "--port"):
       port = arg
       try:
         port=int(port)
-      except exceptions.KeyError:
-        print("Setting the port to 2 8789...")
+      except ValueError:
+        print("The network port requested is invalid. Setting the port to 8789...")
         port = 8789
     elif opt in ("-d", "--dir"):
       directory = arg
@@ -238,71 +251,100 @@ def main(argv):
     elif opt in ("-g", "--usegpu"):
       usegpu = arg
       usegpu = str(usegpu)
-      if ( usegpu == 'NO') or (usegpu == 'No') or (usegpu == 'no') or (usegpu == 'nO') or (usegpu == 'N') or (usegpu == 'n'):
-        print("Jupyter notebook or lab will not run on a GPU node")
-        usegpu = 'no'
-      elif (usegpu == 'Yes') or (usegpu == 'yes') or (usegpu == 'YES') or (usegpu == 'Y') or (usegpu == 'y'):
-        print("Jupyter notebook or lab will run on a GPU node")
+      if (usegpu == 'Yes') or (usegpu == 'yes') or (usegpu == 'YES') or (usegpu == 'Y') or (usegpu == 'y'):
+        #print("Jupyter notebook or lab will run on a GPU node")
         usegpu='yes'
       else:
-        print("USEGPU=",usegpu)
+        #print("TO RUN ON A GPU NODE USE: -g yes ")
+        usegpu = 'no'
+        #print("Jupyter notebook or lab will NOT run on a GPU node")
     elif opt in ("-c", "--gpu_card"):
       gpu = arg
       gpu = str(gpu)
-      if (not gpu == 'RTX2080Ti') and (not gpu == 'GTX1080Ti') and (not gpu == 'P4') and (not gpu == 'V100') and (not gpu == 'A100') and (not gpu == 'A6000') :
+      #print(f"GPU = {gpu}")
+      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100')) :
         print("version, ",gpu,", of GPU not available")
-        print("setting GPU card to RTX2080Ti")
-        gpu = 'RTX2080Ti'
+        print("setting GPU card to ANY")
+        gpu = ''
+      else:
         usegpu='yes'
     elif opt in ("-r", "--gpu_mem"):
       gpumem = arg
-      gpumem = str(gpumem)
-      if (gpumem == '8'):
-        print("GPU global memory = ",gpumem," available for card P4")
+      try:
+        gpumem=int(gpumem)
+      except ValueError:
+        print("GPU global memory should be entered as an integer number... ")
+        #gpumem=''
+        #sys.stderr.write()
+        #sys.exit(1)
+      #if not isinstance(gpumem, int):
+      #  print("GPU global memory should be an integer number... EXITING")
+      #  sys.exit(1)
+      #gpumem=int(gpumem)  
+      if (gpumem == 8):
+        print("GPU global memory = ",gpumem,"GB available for card P4")
         print("setting GPU card to P4")
         gpu = 'P4'
         usegpu='yes'
-      elif (gpumem == '12'):
-        print("GPU global memory = ",gpumem," available for card GTX1080Ti")
-        print("setting GPU card to GTX1080Ti")
-        gpu = 'GTX1080Ti'
-        usegpu='yes'
-      elif (gpumem == '10'):
-        print("GPU global memory = ",gpumem," available for card RTX2080Ti")
+        gpumem=str(gpumem)
+      elif (gpumem == 12):
+        if (not gpu == 'K40'):
+          print("GPU global memory = ",gpumem,"GB available for card GTX1080Ti")
+          print("setting GPU card to GTX1080Ti")
+          gpu = 'GTX1080Ti'
+          usegpu='yes'
+          gpumem=str(gpumem)
+        else:
+          usegpu='yes'
+          gpumem=str(gpumem)
+      elif (gpumem == 10):
+        print("GPU global memory = ",gpumem,"GB available for card RTX2080Ti")
         print("setting GPU card to RTX2080Ti")
         gpu = 'RTX2080Ti'
         usegpu='yes'
-      elif (gpumem == '32'):
-        print("GPU global memory = ",gpumem," available for card V100")
+        gpumem=str(gpumem)
+      elif (gpumem == 32):
+        print("GPU global memory = ",gpumem,"GB available for card V100")
         print("setting GPU card to V100")
         gpu = 'V100'
         usegpu='yes'
-      elif (gpumem == '40'):
-        print("GPU global memory = ",gpumem," available for card A100")
+        gpumem=str(gpumem)
+      elif (gpumem == 40):
+        print("GPU global memory = ",gpumem,"GB available for card A100")
         print("setting GPU card to A100")
         gpu = 'A100'
         usegpu='yes'
-      elif (gpumem == '42'):
-        print("GPU global memory = ",gpumem," available for card A6000")
+        gpumem=str(gpumem)
+      elif (gpumem == 42):
+        print("GPU global memory = ",gpumem,"GB available for card A6000")
         print("setting GPU card to A6000")
         gpu = 'A6000'
         usegpu='yes'
-      elif ( gpumem == '80'):
-        print("GPU global memory = ",gpumem," available for card A100")
+        gpumem=str(gpumem)
+      elif ( gpumem == 80):
+        print("GPU global memory = ",gpumem,"GB available for card A100")
         print("setting GPU card to A100")
         gpu = 'A100'
         usegpu='yes'
+        gpumem=str(gpumem)
+      elif ( gpumem == 96):
+        print("GPU global memory = ",gpumem,"GB available for card H100")
+        print("setting GPU card to H100")
+        gpu = 'H100'
+        usegpu='yes'
+        gpumem=str(gpumem)
       else:
-        print("GPU global memory = ",gpumem," not available")
-        print("setting GPU global memory version to NONE")
+        print("GPU global memory = ",gpumem,"GB not available")
+        print("setting GPU global memory version to ANY")
+        print("YOU SHOULD ENTER ONLY A NUMERIC VALUE")
         gpumem = ''
     elif opt in ("-l", "--cuda"):
       cudaver = arg
       cudaver = str(cudaver)
-      if (not cudaver == '9.2') and (not cudaver == '10.0') and (not cudaver == '10.2') and (not cudaver == '11.0') and (not cudaver == '11.7') and (not cudaver == '11.8') and (not cudaver == '12.3') and (not cudaver == '12.4'):
+      if (not cudaver == '9.2') and (not cudaver == '10.0') and (not cudaver == '10.2') and (not cudaver == '11.0') and (not cudaver == '11.3') and (not cudaver == '11.7') and (not cudaver == '11.8') and (not cudaver == '12.3'):
         print("version, ",cudaver,", not available")
-        print("setting cuda version to 10.2")
-        cudaver = '10.2'
+        print("setting cuda version to 11.8")
+        cudaver = '11.3'
     elif opt in ("-o", "--highp"):
       highp = arg
       highp = str(highp)
@@ -368,26 +410,30 @@ def main(argv):
     else:
       username = str(os.environ["USER"])
 
-
-  print("Your Hoffman2 user name is", username )
-  print("The time in hours is", timeinhours )
-  print("The memory in GB per slots is", memoryingb)
+  print("") 
+  print("The requested Hoffman2 Cluster user name is:", username )
+  print("The requested runtime is:", timeinhours,"hours" )
+  print("The requested memory per slots is:", memoryingb,"GB")
   if (numberofslots > 1):
-    print("The parallel environment is", parenv)
-    print("The number of slots is", numberofslots)
-    print("The version of python for the notebook is", pythonver)
-  if (usegpu == 'no') and (highp == 'yes'):
+    print("The parallel environment is:", parenv)
+    print("The number of slots is:", numberofslots)
+    print("The version of python for the notebook is:", pythonver)
+  if (highp == 'yes'):
     print("Your Jupyter NB or lab will run on owned resources")
-  elif (usegpu == 'yes') and (highp == 'no'):
-    print("Your Jupyter NB or lab will run on a GPU node")
-    print("Your Jupyter NB or lab will load cuda version ",cudaver)
-  if (gpumem != ''):
-    print("Your Jupyter NB or lab will run on GPU card ",gpu," with ",gpumem,"GB of global GPU memory")
-  if (gpumem == '') and (gpu != ''):
-    print("Your Jupyter NB or lab will run on GPU card ",gpu)
-  elif (usegpu == 'yes') and (highp == 'yes'):
-    print("Your Jupyter NB or lab will run on a GPU owned node")  
-    print("Your Jupyter NB or lab will load cuda version ",cudaver)
+  if (usegpu == 'yes'):
+    if (gpu==''):
+      print("Your Jupyter NB or lab will run on a GPU node")
+    else:
+      if (gpumem == ''):
+        if (cudaver != ''):
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," and load cuda version",cudaver)
+        else:
+          print("Your Jupyter NB or lab will run on GPU card ",gpu)
+      else:
+        if (cudaver != ''):
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," with ",gpumem,"GB of global GPU memory and load cuda version",cudaver)
+        else:
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," with ",gpumem,"GB of global GPU memory")
   if (port != ''):
     print("Your Jupyter NB or lab will run on port ",port)
   if (exclusive == 'yes'):
@@ -400,8 +446,6 @@ def main(argv):
     print("Your Jupyter NB or lab will run on ",arch," CPU")
   if (mods != ''):
     print("Your Jupyter NB or lab will load these environmental modules ",mods)
-    #for l in lofmods:
-    #  print("MODS=",l)
   if (cve != ''):
     print("Your Jupyter NB or lab will load this conda virtual environment ",cve)  
   if (pve != ''):
@@ -419,8 +463,12 @@ print("usegpu= ",usegpu,"; highp= ",highp,"; exclusive= ",exclusive, "; gputype=
 if ( arch != '' ):
   arch=',arch='+arch
 
+if ( gpu != '' ):
+  gpu=','+gpu
+
+  
 if ( gpumem != '' ):
-  gpumem=',gpumem='+gpumem
+  gpumem=',gpu_mem='+gpumem
 
 if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
 #   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe dc\* %d")
@@ -432,20 +480,32 @@ elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
 elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s,highp%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,highp,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s,highp,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,highp,exclusive,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
 elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
-   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,gpu,%s%s,exclusive%s -pe %s %d -w e")
+   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,exclusive,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
 MODULE_LOADCUDA_TEMP = "module load cuda/%s"
 MODULE_LOAD_TEMP = "module load %s"
 CONDA_ACTIVATE = "conda activate %s"
 PYTHON_ACTIVATE= "source %s/bin/activate"
 CD_TEMP = "cd %s"
 
+print()
+print("THE FOLLOWING INTERACTIVE SESSION WILL BE REQUESTED:")
+print()
 
+if (usegpu == 'no'):
+   print((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+elif (usegpu == 'yes'):
+   print((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,gpumem,arch,parenv,numberofslots))+"\n") 
+
+print("\nIF THE REQUESTED RESOURCES DO NOT LOOK CORRECT INTERRUPT W/ `Control C`")
+print("RUN: `h2jupynb --help` TO SEE A FULL LIST OF OPTIONS") 
+time.sleep(2) 
+#exit()
 
 STARTNBCMD = "jupyter notebook"
 
@@ -484,7 +544,14 @@ if (usegpu == 'yes'):
 if (mods != ''):
   pqsub.stdin.write(modstoload +"\n")
 if (pythonver == 'python/3.11.5'):
-  pqsub.stdin.write("module load gcc/7.5.0" +"\n")
+  #gccver='gcc/7.5.0'
+  pqsub.stdin.write(MODULE_LOAD_TEMP % (gccver) +"\n")
+if (pythonver == 'python/3.11.12'):
+  #gccver='gcc/11.3.0'
+  pqsub.stdin.write(MODULE_LOAD_TEMP % (gccver) +"\n")
+if (pythonver == 'python/3.12.9'):
+  #gccver='gcc/11.3.0'
+  pqsub.stdin.write(MODULE_LOAD_TEMP % (gccver) +"\n")
 pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
 if (cve != ''):
   pqsub.stdin.write(CONDA_ACTIVATE % (cve) +"\n")
