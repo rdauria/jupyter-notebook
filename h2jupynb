@@ -262,7 +262,7 @@ def main(argv):
       gpu = arg
       gpu = str(gpu)
       #print(f"GPU = {gpu}")
-      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100')) :
+      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100') and ( gpu != 'L40S')) :
         print("version, ",gpu,", of GPU not available")
         print("setting GPU card to ANY")
         gpu = ''
@@ -319,6 +319,12 @@ def main(argv):
         print("GPU global memory = ",gpumem,"GB available for card A6000")
         print("setting GPU card to A6000")
         gpu = 'A6000'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif (gpumem == 48):
+        print("GPU global memory = ",gpumem,"GB available for card L40S")
+        print("setting GPU card to L40S")
+        gpu = 'L40S'
         usegpu='yes'
         gpumem=str(gpumem)
       elif ( gpumem == 80):
