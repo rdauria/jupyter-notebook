@@ -129,8 +129,8 @@ def usage():
   print("\t Architectures (CPUs) currently publicly available: see output of qhost")
   print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
   print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.3, 11.7, 11.8, 12.3\n")
-  print("\t GPU cards currently available are: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100\n")
-  print("\t GPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000), 96 (H100)\n")
+  print("\t GPU cards currently available are: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100, L40S\n")
+  print("\t GPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000 & L40S), 96 (H100)\n")
   print("\t Environmental modules to be loaded as a comma (no space) list (e.g.:gsl/2.6,")
   print("\t or gsl,curl/7.70.0)\n")
   print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
@@ -315,18 +315,19 @@ def main(argv):
         gpu = 'A100'
         usegpu='yes'
         gpumem=str(gpumem)
-      elif (gpumem == 42):
-        print("GPU global memory = ",gpumem,"GB available for card A6000")
-        print("setting GPU card to A6000")
-        gpu = 'A6000'
-        usegpu='yes'
-        gpumem=str(gpumem)
       elif (gpumem == 48):
-        print("GPU global memory = ",gpumem,"GB available for card L40S")
-        print("setting GPU card to L40S")
-        gpu = 'L40S'
-        usegpu='yes'
-        gpumem=str(gpumem)
+        if (not gpu == 'L40S'):
+          print("GPU global memory = ",gpumem,"GB available for cards A6000 & L40S")
+          print("setting GPU card to A6000")
+          gpu = 'A6000'
+          usegpu='yes'
+          gpumem=str(gpumem)
+        else:
+          #print("GPU global memory = ",gpumem,"GB available for card L40S")
+          #print("setting GPU card to L40S")
+          gpu = 'L40S'
+          usegpu='yes'
+          gpumem=str(gpumem)
       elif ( gpumem == 80):
         print("GPU global memory = ",gpumem,"GB available for card A100")
         print("setting GPU card to A100")
