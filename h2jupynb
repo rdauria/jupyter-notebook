@@ -184,13 +184,13 @@ def main(argv):
       except ValueError:
         print("The parallel environment requested is invalid. Setting the parallel environmen to shared...")
         parenv = 1
-        if (parenv == 1):
-          parenv = 'shared'
-        elif (parenv == 2):
-          parenv = 'dc\\*'
-        else:
-          print("Setting the parallel environmen to shared...")
-          parenv = 1
+      if (parenv == 1):
+        parenv = 'shared'
+      elif (parenv == 2):
+        parenv = 'dc\\*'
+      else:
+        print("Setting the parallel environmen to shared...")
+        parenv = 'shared'
     elif opt in ("-s", "--slots"):
       numberofslots = arg
       try:
