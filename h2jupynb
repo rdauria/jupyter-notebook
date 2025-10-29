@@ -123,7 +123,7 @@ def usage():
   print("\t not running on owned nodes")
   print("\t not running in exclusive mode")
   print("\t no specific CPU selected (see \"ARCH\" in output of \"qhost\")")
-  print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6, 3.11.5,")
+  print("\n\t Python versions currently available are: 2.7.18, 3.7.3, 3.9.6, 3.10.18, 3.11.5,")
   print("\t 3.11.12, 3.12.9, anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
   print("\t anaconda3/2022.05, anaconda3/2023.03, mamba/1.4.2, mamba/1.5.5\n")
   print("\t Architectures (CPUs) currently publicly available: see output of qhost")
@@ -201,7 +201,7 @@ def main(argv):
     elif opt in ("-v", "--version"):
       pythonver = arg
       pythonver = str(pythonver)
-      if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver == '3.11.5') and (not pythonver == '3.11.12')  and (not pythonver == '3.12.9') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba'):
+      if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver =='3.10.18') and (not pythonver == '3.11.5') and (not pythonver == '3.11.12')  and (not pythonver == '3.12.9') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba'):
         print("version, ", pythonver,", of python not available")
         print("setting python version to 3.9.6")
         pythonver = 'python/3.9.6'
@@ -210,6 +210,9 @@ def main(argv):
       elif (pythonver == '2.7.18'):
         pythonver = "python/"+pythonver
       elif (pythonver == '3.9.6'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.10.18'):
+        gccver = "gcc/11.3.0"
         pythonver = "python/"+pythonver
       elif (pythonver == '3.11.5'):
         gccver = "gcc/7.5.0"
@@ -550,6 +553,9 @@ if (usegpu == 'yes'):
   pqsub.stdin.write(MODULE_LOADCUDA_TEMP % (cudaver) +"\n")
 if (mods != ''):
   pqsub.stdin.write(modstoload +"\n")
+if (pythonver == 'python/3.10.18'):
+  #gccver='gcc/11.3.0'
+  pqsub.stdin.write(MODULE_LOAD_TEMP % (gccver) +"\n")
 if (pythonver == 'python/3.11.5'):
   #gccver='gcc/7.5.0'
   pqsub.stdin.write(MODULE_LOAD_TEMP % (gccver) +"\n")
