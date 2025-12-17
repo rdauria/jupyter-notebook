@@ -532,11 +532,13 @@ def readwhile(stream,func):
 
 
 if (sshlogs == 'no'):          
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+  # Open pipes in text mode with explicit UTF-8 decoding and replace errors
+  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
   pqsub.stdin.flush()
   pqsub.stdout.flush()
 if (sshlogs == 'yes'):          
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,universal_newlines=True)
+  # Open pipes in text mode with explicit UTF-8 decoding and replace errors
+  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
   pqsub.stdin.flush()
   pqsub.stdout.flush()
 
@@ -635,7 +637,10 @@ if (sshlogs == 'yes'):
 
 print(' '.join(tunnel))
 
-ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,universal_newlines=True)
+# Open tunnel pipes in text mode with explicit UTF-8 and replace errors to avoid
+# UnicodeDecodeError when subprocess emits bytes not decodable by the system
+# code page (e.g., cp1252 on Windows).
+ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace')
 ptunnel.stdin.write('echo TUNNEL\n')
 ptunnel.stdin.flush()
 
