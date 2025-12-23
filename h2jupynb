@@ -1,40 +1,44 @@
 #!/usr/bin/env python
-###
-# This script allows users to start a jupyter notebooks/labs session
-# running on the UCLA Hoffman2 Cluster while displaying it on their
-# local browser. 
-#
-# Users download this script on their local machine and run it on a local
-# terminal via:
-#
-# python3 h2jupynb -u $H2-USERNAME [other options]
-# 
-# ***The script prompts the users twice for their Hoffman2 password***
-#
-#
-# To see a full list of current available options:
-#
-# python3 h2jupynb --help
-#
-# See also:
-#
-# https://www.hoffman2.idre.ucla.edu/Using-H2/Connecting/Connecting.html#connecting-via-jupyter-notebook-lab
-#
-# For questions open a ticket on:
-# 
-# https://support.idre.ucla.edu/helpdesk/Tickets/New?categoryId=390006
-# 
-# or file an issue or discussion on:
-#
-# https://github.com/rdauria/jupyter-notebook
-#
-# Author: RD (hpc@ucla.edu) / Adapted from: https://github.com/pyHPC/ipynbhpc
-#
-###
+"""
+ This script allows users to start a jupyter notebooks/labs session
+ running on the UCLA Hoffman2 Cluster while displaying it on their
+ local browser. 
+
+ Users download this script on their local machine and run it on a local
+ terminal via:
+
+ python3 h2jupynb -u $H2-USERNAME [other options]
+ 
+ ***The script prompts the users twice for their Hoffman2 password***
+
+
+ To see a full list of current available options:
+
+ python3 h2jupynb --help
+
+ See also:
+
+ https://www.hoffman2.idre.ucla.edu/Using-H2/Connecting/Connecting.html#connecting-via-jupyter-notebook-lab
+
+ For questions open a ticket on:
+
+ https://support.idre.ucla.edu/helpdesk/Tickets/New?categoryId=390006
+ 
+ or file an issue or discussion on:
+
+ https://github.com/rdauria/jupyter-notebook
+
+ Author: RD (hpc@ucla.edu) / Adapted from: https://github.com/pyHPC/ipynbhpc
+
+ Updates includes robustness fixes for Unicode decoding and Ctrl-C handling on Windows PowerShell
+
+"""
 
 from __future__ import print_function
 from subprocess import Popen, PIPE, call
+import subprocess
 import sys
+import ctypes
 import webbrowser
 from getopt import getopt
 import time
@@ -45,10 +49,110 @@ from datetime import datetime
 import sys, getopt
 import signal
 import time
+from threading import Thread
+
+# Inline Countdown so this distributable is self-contained (no external import).
+class Countdown(Thread):
+  """Background countdown timer that prints remaining time to the terminal.
+
+  Copied here so the distributable doesn't import the modular helper file.
+  Works on Python 2 and 3. Use `stop()` to request termination early.
+  """
+  def __init__(self, total_seconds, interval=10):
+    super(Countdown, self).__init__()
+    self.total = int(total_seconds)
+    self.interval = max(1, int(interval))
+    try:
+      # Python 3/2 compatible Event import earlier in file
+      from threading import Event
+      self._stop = Event()
+    except Exception:
+      # fallback: simple flag
+      self._stop = None
+      self._stopped_flag = False
+    # make daemon-compatible across versions
+    try:
+      self.daemon = True
+    except Exception:
+      pass
+    self._last_len = 0
+
+  def stop(self):
+    if hasattr(self, '_stop') and self._stop is not None:
+      self._stop.set()
+    else:
+      self._stopped_flag = True
+
+  def stopped(self):
+    if hasattr(self, '_stop') and self._stop is not None:
+      return self._stop.is_set()
+    return getattr(self, '_stopped_flag', False)
+
+  def _format(self, secs):
+    h = secs // 3600
+    m = (secs % 3600) // 60
+    s = secs % 60
+    return "{:02d}:{:02d}:{:02d}".format(h, m, s)
+
+  def _print_line(self, text):
+    try:
+      sys.stdout.write('\r' + text + ' ' * max(0, self._last_len - len(text)))
+      sys.stdout.flush()
+    except Exception:
+      pass
+    self._last_len = len(text)
+
+  def run(self):
+    remaining = self.total
+    self._print_line("Time remaining: {}".format(self._format(remaining)))
+    while remaining > 0:
+      # wait with interval, but allow stop flag to be checked
+      slept = 0
+      while slept < self.interval:
+        if self.stopped():
+          break
+        time.sleep(1)
+        slept += 1
+      if self.stopped():
+        break
+      remaining -= self.interval
+      if remaining < 0:
+        remaining = 0
+      self._print_line("Time remaining: {}".format(self._format(remaining)))
+    try:
+      sys.stdout.write('\n')
+      sys.stdout.flush()
+    except Exception:
+      pass
 
 random.seed(datetime.now().strftime("%S"))
 
-script_version=3.1
+# Maintain Python 2 compatibility when needed.
+# Provide a small compatibility layer so the script can run under Python2 or Python3.
+is_py2 = sys.version_info[0] == 2
+# Ensure `xrange` is available on both versions (Python2 has it; Python3 will alias it to range)
+if not is_py2:
+  xrange = range
+
+
+def _send_ctrl_break(p):
+  """Try to interrupt a child process group on Windows using
+  GenerateConsoleCtrlEvent; otherwise send SIGINT or kill.
+  """
+  try:
+    if opsys == 'Windows':
+      try:
+        ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, int(p.pid))
+        time.sleep(0.2)
+      except Exception:
+        try:
+          p.kill()
+        except Exception:
+          pass
+  except Exception:
+    pass
+
+script_version=3.5
 username = ''
 username = str(username)
 timeinhours = 2
@@ -84,6 +188,16 @@ gccver= ''
 
 print("h2jupynb version ",script_version)
 print()
+
+# Detect Windows robustly and show a short tip for PowerShell users
+is_windows = (os.name == 'nt') or sys.platform.startswith('win') or opsys.lower().startswith('win')
+if is_windows:
+  print("Note for Windows users: if Ctrl-C doesn't stop the script while the countdown is running, try Ctrl+Break (Pause/Break) or Ctrl+Fn+B on some laptops.")
+
+# Convenience flag for showing Windows-specific help and exiting early.
+if '--windows-help' in sys.argv:
+  print("Windows interruption tip: if Ctrl-C doesn't interrupt during the countdown, try Ctrl+Break (Pause/Break) or Ctrl+Fn+B. The script will also try to send a CTRL_BREAK_EVENT to child processes on Windows.")
+  sys.exit(0)
 
 if sys.version_info<(2,6,0):
   sys.stderr.write("You need python 2.6 or later to run this script\n")
@@ -127,10 +241,10 @@ def usage():
   print("\t 3.11.12, 3.12.9, anaconda3/2020.07, anaconda3 (2020.11), anaconda3/2021.11,")
   print("\t anaconda3/2022.05, anaconda3/2023.03, mamba/1.4.2, mamba/1.5.5\n")
   print("\t Architectures (CPUs) currently publicly available: see output of qhost")
-  print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\\\*\n")
+  print("\t to request a specific architecture, e.g., intel-gold*: -a intel-gold\\*\n")
   print("\t Cuda versions currently available are: 9.2, 10.0, 10.2, 11.0, 11.3, 11.7, 11.8, 12.3\n")
-  print("\t GPU cards currently available are: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100, L40S\n")
-  print("\t GPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000 & L40S), 96 (H100)\n")
+  print("\t GPU cards currently available are: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100, H200, L40S\n")
+  print("\t GPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000 & L40S), 96 (H100), 141 (H200)\n")
   print("\t Environmental modules to be loaded as a comma (no space) list (e.g.:gsl/2.6,")
   print("\t or gsl,curl/7.70.0)\n")
   print("\t Conda virtual environment - assumes a version of anaconda3/mamba is requested")
@@ -265,7 +379,7 @@ def main(argv):
       gpu = arg
       gpu = str(gpu)
       #print(f"GPU = {gpu}")
-      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100') and ( gpu != 'L40S')) :
+      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100') and ( gpu != 'H200') and ( gpu != 'L40S')) :
         print("version, ",gpu,", of GPU not available")
         print("setting GPU card to ANY")
         gpu = ''
@@ -341,6 +455,12 @@ def main(argv):
         print("GPU global memory = ",gpumem,"GB available for card H100")
         print("setting GPU card to H100")
         gpu = 'H100'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif ( gpumem == 141):
+        print("GPU global memory = ",gpumem,"GB available for card H100")
+        print("setting GPU card to H200")
+        gpu = 'H200'
         usegpu='yes'
         gpumem=str(gpumem)
       else:
@@ -475,7 +595,6 @@ if ( arch != '' ):
 
 if ( gpu != '' ):
   gpu=','+gpu
-
   
 if ( gpumem != '' ):
   gpumem=',gpu_mem='+gpumem
@@ -522,25 +641,101 @@ STARTNBCMD = "jupyter notebook"
 print('STARTNBCMD = ',STARTNBCMD)
 
 def readwhile(stream,func):
-    while True:
-        line = stream.readline()
-        if line!='':
-          print(line[:-1])
-          if func(line): break
-        else:
-            raise Exception("Disconnected unexpectedly.")
+  # Choose bytes type depending on Python version (Py2: str, Py3: bytes)
+  bytes_type = str if is_py2 else bytes
+  while True:
+    line = stream.readline()
+    # Support both bytes and str from subprocess streams. Decode bytes
+    # using UTF-8 and replace undecodable bytes so we never raise a
+    # UnicodeDecodeError while reading remote output.
+    if isinstance(line, bytes_type):
+      try:
+        sline = line.decode('utf-8', errors='replace')
+      except AttributeError:
+        sline = line
+    else:
+      sline = line
+
+    if sline != '':
+      if sline.endswith('\n'):
+        print(sline[:-1])
+      else:
+        print(sline)
+      if func(sline):
+        break
+    else:
+      raise Exception("Disconnected unexpectedly.")
+
+
+def readwhile_threaded(stream, func):
+  """Run readwhile(stream, func) in a background thread and allow the
+  main thread to handle KeyboardInterrupt (Ctrl-C) on Windows PowerShell.
+
+  This helper joins the reader thread in a loop so KeyboardInterrupt can be
+  received and cause immediate cleanup.
+  """
+  exc = []
+
+  def target():
+    try:
+      readwhile(stream, func)
+    except Exception as e:
+      exc.append(e)
+
+  t = Thread(target=target)
+  # Python 2's Thread ctor doesn't accept `daemon=`; set attribute for both versions
+  try:
+    t.daemon = True
+  except Exception:
+    pass
+  t.start()
+  try:
+    while t.is_alive():
+      t.join(timeout=0.1)
+  except KeyboardInterrupt:
+    # Best-effort cleanup here; pqsub/ptunnel may or may not be defined
+    try:
+      _send_ctrl_break(pqsub)
+      _send_ctrl_break(ptunnel)
+    except Exception:
+      pass
+    sys.exit(1)
+
+  if exc:
+    # Re-raise the first exception from the reader thread
+    raise exc[0]
 
 
 if (sshlogs == 'no'):          
-  # Open pipes in text mode with explicit UTF-8 decoding and replace errors
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
+  # Open pipes; on Python3 we use text mode with explicit UTF-8 decoding
+  # and errors='replace'. Under Python2 we open binary pipes and rely on
+  # readwhile to decode bytes (Python2's Popen doesn't support text/encoding args).
+  if is_py2:
+    if opsys == 'Windows':
+      pqsub = Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub = Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+  else:
+    if opsys == 'Windows':
+      pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
   pqsub.stdin.flush()
   pqsub.stdout.flush()
 if (sshlogs == 'yes'):          
-  # Open pipes in text mode with explicit UTF-8 decoding and replace errors
-  pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
+  if is_py2:
+    if opsys == 'Windows':
+      pqsub = Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub = Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+  else:
+    if opsys == 'Windows':
+      pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub=Popen(['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','myssh.log','-X','-Y','-t','-t','-4','%s@hoffman2.idre.ucla.edu' % username],stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
   pqsub.stdin.flush()
   pqsub.stdout.flush()
+
 
 
 
@@ -583,7 +778,7 @@ def gethostname(line):
         hostname = line.split('=')[1].strip()
         return True
 
-readwhile(pqsub.stdout, gethostname)
+readwhile_threaded(pqsub.stdout, gethostname)
 
 if ('login' in hostname):
    print("\n ############################################")
@@ -594,7 +789,7 @@ if ('login' in hostname):
    print(" https://support.idre.ucla.edu/helpdesk      ")
    print(" providing the exact command you used to     ")
    print(" start the session. Copying and pasting the  ")
-   print(" output of your terminal from the issuing of ")
+   print(" the output of your terminal from the issuing of ")
    print(" the h2jupynb command will expedite matters. ")
    print(" **NOTE: GPU requests will exit if a gpu node")
    print("         is not available when the request is")
@@ -617,12 +812,12 @@ pqsub.stdin.flush()
 
 
 if (STARTNBCMD == 'jupyter notebook'):
-  readwhile(pqsub.stdout, gethttpcommand)
+  readwhile_threaded(pqsub.stdout, gethttpcommand)
 else:
-  readwhile(pqsub.stdout, lambda line: line.find('http://%s:%s/'%(hostname,port))>0)
+  readwhile_threaded(pqsub.stdout, lambda line: line.find('http://%s:%s/'%(hostname,port))>0)
 
 print("httpcommand=",httpcommand)  
-  
+
 token = httpcommand.split("=")[-1]
 
 newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
@@ -635,17 +830,34 @@ if (sshlogs == 'no'):
 if (sshlogs == 'yes'):
   tunnel = ['ssh','-o','ServerAliveCountMax=5','-o','IPQoS=throughput','-o','ServerAliveInterval=30','-vvv','-E','mytunnel.log','-g', '-L', '%s:%s:%s'%(port,hostname,port), '-t', '%s@hoffman2.idre.ucla.edu' % username]
 
+print('\nAbout to open SSH tunnel:')
+print(' You may be prompted for your Hoffman2 password or your SSH key passphrase')
+print(' a second time when the tunnel is created. This is normal if SSH key-based')
+print(' authentication or an SSH agent is not in use for the tunnel step.')
+print(' To avoid a second prompt, consider:')
+print('  - loading your key into an SSH agent (ssh-agent / Pageant),')
+print('  - or using an SSH key without a passphrase (less secure).')
+print('')
+print('Proceeding to open the SSH tunnel...')
 print(' '.join(tunnel))
 
-# Open tunnel pipes in text mode with explicit UTF-8 and replace errors to avoid
-# UnicodeDecodeError when subprocess emits bytes not decodable by the system
-# code page (e.g., cp1252 on Windows).
-ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace')
+# Open tunnel pipes. On Python 2 we use binary pipes and let readwhile decode;
+# on Python 3 we use text mode with explicit UTF-8 decoding and errors='replace'.
+if is_py2:
+  if opsys == 'Windows':
+    ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+  else:
+    ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE)
+else:
+  if opsys == 'Windows':
+    ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+  else:
+    ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace')
 ptunnel.stdin.write('echo TUNNEL\n')
 ptunnel.stdin.flush()
 
 
-readwhile(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
+readwhile_threaded(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
 
 if ('CYGWIN' in opsys) or ('Cygwin' in opsys) or ('cygwin' in opsys):
    if (STARTNBCMD == 'jupyter notebook'):
@@ -660,14 +872,27 @@ else:
 
 print("Succesfully opened notebook!")
 print("Kill this process to end your notebook connection.")
+print("")
+print("How to terminate:")
+print(" - On Unix/macOS: press Ctrl-C in this terminal to request shutdown.")
+print(" - On Windows PowerShell: if Ctrl-C does not stop the script, press Ctrl+Break (Pause/Break)")
+print("   or the laptop equivalent (often Ctrl+Fn+Break or Ctrl+Fn+B). The distributable will also")
+print("   attempt to send a CTRL_BREAK_EVENT to the SSH/tunnel child processes to help them exit.")
+print("")
+print("If child processes do not terminate, the script will fall back to killing them. If that fails,")
+print("you can close this terminal window as a last resort.")
 
 
 def handler(signum, frame):
-    res = print("Detected Ctrl-c. Exiting...")
-    pqsub.kill()
-    ptunnel.kill()
-    print("Succesfully cleaned up connections.")
-    exit(1)
+  print("Detected Ctrl-c. Exiting...")
+  try:
+    _send_ctrl_break(pqsub)
+    _send_ctrl_break(ptunnel)
+  except Exception:
+    # pqsub or ptunnel may not be defined yet
+    pass
+  print("Succesfully cleaned up connections.")
+  exit(1)
  
 signal.signal(signal.SIGINT, handler)
 
@@ -676,35 +901,30 @@ signal.signal(signal.SIGINT, handler)
 #print(repr(ptunnel.stdout.readline()))
 #readwhile(ptunnel.stdout, lambda line: line.startswith('TESTTESTTESTTEST#############')>0)
 
-pver=sys.version_info[0]
+# Start a background countdown so the main thread remains responsive to Ctrl-C.
+countdown = Countdown(timeinhours * 3600, interval=10)
+countdown.start()
+try:
+  while countdown.is_alive():
+    countdown.join(timeout=1)
+except KeyboardInterrupt:
+  print('\nCtrl-C pressed. Cleaning up...')
+finally:
+  countdown.stop()
+  countdown.join(timeout=2)
 
-if pver == 2:
- for i in xrange(timeinhours*3600,0,-10):
-    sys.stdout.write(str(i)+' ')
-    sys.stdout.flush()
-    #ptunnel.stdin.write('echo T')
-    #ptunnel.stdin.flush()
-    #print(repr(ptunnel.stdout.readline()))
-    time.sleep(10)
-elif pver == 3:
- for i in range(timeinhours*3600,0,-10):
-    sys.stdout.write(str(i)+' ')
-    sys.stdout.flush()
-    #ptunnel.stdin.write('echo T')
-    #ptunnel.stdin.flush()
-    #print(repr(ptunnel.stdout.readline()))
-    time.sleep(10)
-
-#time.sleep(timeinhours*3600)
-
-
-pqsub.kill()
-ptunnel.kill()
+# Clean up child processes
+try:
+  pqsub.kill()
+except Exception:
+  pass
+try:
+  ptunnel.kill()
+except Exception:
+  pass
 
 print("Elapsted runtime. Terminating...")
 print("Succesfully cleaned up connections.")
-
-
 
 
 
