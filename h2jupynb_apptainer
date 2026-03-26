@@ -1,0 +1,1140 @@
+#!/usr/bin/env python
+
+"""
+ h2jupynb - Hoffman2 Jupyter launcher
+ 
+ 
+ This script allows users to start a jupyter notebooks/labs session
+ running on the UCLA Hoffman2 Cluster while displaying it on their
+ local browser. 
+
+ Users download this script on their local machine and run it on a local
+ terminal via:
+
+ python3 h2jupynb -u $H2-USERNAME [other options]
+ 
+ ***The script prompts the users twice for their Hoffman2 password***
+
+
+ To see a full list of current available options:
+
+ python3 h2jupynb --help
+
+ See also:
+
+ https://www.hoffman2.idre.ucla.edu/Using-H2/Connecting/Connecting.html#connecting-via-jupyter-notebook-lab
+
+ For questions open a ticket on:
+
+ https://support.idre.ucla.edu/helpdesk/Tickets/New?categoryId=390006
+ 
+ or file an issue or discussion on:
+
+ https://github.com/rdauria/jupyter-notebook
+
+ Author: RD (hpc@ucla.edu) / Adapted from: https://github.com/pyHPC/ipynbhpc
+
+ Updates includes robustness fixes for Unicode decoding and Ctrl-C handling on Windows PowerShell
+
+"""
+
+# --- imports ---
+from __future__ import print_function
+from subprocess import Popen, PIPE, call
+import subprocess
+import sys
+import ctypes
+import webbrowser
+from getopt import getopt
+import time
+import os
+import platform
+import random
+from datetime import datetime
+import sys, getopt
+import signal
+import time
+from threading import Thread
+
+__version__="3.6"
+"""
+ Changelog:
+ Version: 3.6
+ Date: 2026-03-25
+  Changes:
+   - Added modular help system (--help-gpu, --help-apptainer, etc.)
+   - Updated code for better flow
+   - Added Apptainer container support via -f
+"""
+
+# Inline Countdown so this distributable is self-contained (no external import).
+class Countdown(Thread):
+  """Background countdown timer that prints remaining time to the terminal.
+
+  Copied here so the distributable doesn't import the modular helper file.
+  Works on Python 2 and 3. Use `stop()` to request termination early.
+  """
+  def __init__(self, total_seconds, interval=10):
+    super(Countdown, self).__init__()
+    self.total = int(total_seconds)
+    self.interval = max(1, int(interval))
+    try:
+      # Python 3/2 compatible Event import earlier in file
+      from threading import Event
+      self._stop_event = Event()
+    except Exception:
+      # fallback: simple flag
+      self._stop_event = None
+      self._stopped_flag = False
+    # make daemon-compatible across versions
+    try:
+      self.daemon = True
+    except Exception:
+      pass
+    self._last_len = 0
+
+  def stop(self):
+    if self._stop_event is not None:
+      self._stop_event.set()
+    else:
+      self._stopped_flag = True
+
+  def stopped(self):
+    if self._stop_event is not None:
+      return self._stop_event.is_set()
+    return getattr(self, '_stopped_flag', False)
+
+  def _format(self, secs):
+    h = secs // 3600
+    m = (secs % 3600) // 60
+    s = secs % 60
+    return "{:02d}:{:02d}:{:02d}".format(h, m, s)
+
+  def _print_line(self, text):
+    try:
+      #sys.stdout.write('\r' + text + ' ' * max(0, self._last_len - len(text)))
+      sys.stdout.write('\r' + text + ' ' * 2)  # pad extra spaces
+      #sys.stdout.write('\r' + ' ' * self._last_len + '\r')
+      sys.stdout.flush()
+    except Exception:
+      pass
+    self._last_len = len(text)
+
+  def run(self):
+    remaining = self.total
+    self._print_line("Time remaining: {}".format(self._format(remaining)))
+    while remaining > 0:
+      # wait with interval, but allow stop flag to be checked
+      slept = 0
+      while slept < self.interval:
+        if self.stopped():
+          break
+        time.sleep(1)
+        slept += 1
+      if self.stopped():
+        break
+      remaining -= self.interval
+      if remaining < 0:
+        remaining = 0
+      self._print_line("Time remaining: {}".format(self._format(remaining)))
+    try:
+      sys.stdout.write('\n')
+      sys.stdout.flush()
+    except Exception:
+      pass
+
+random.seed(datetime.now().strftime("%S"))
+
+# Maintain Python 2 compatibility when needed.
+# Provide a small compatibility layer so the script can run under Python2 or Python3.
+is_py2 = sys.version_info[0] == 2
+# Ensure `xrange` is available on both versions (Python2 has it; Python3 will alias it to range)
+if not is_py2:
+  xrange = range
+
+
+def _send_ctrl_break(p):
+  """Try to interrupt a child process group on Windows using
+  GenerateConsoleCtrlEvent; otherwise send SIGINT or kill.
+  """
+  try:
+    if opsys == 'Windows':
+      try:
+        ctypes.windll.kernel32.GenerateConsoleCtrlEvent(1, int(p.pid))
+        time.sleep(0.2)
+      except Exception:
+        try:
+          p.kill()
+        except Exception:
+          pass
+  except Exception:
+    pass
+
+# --- defaults ---
+username = ''
+username = str(username)
+timeinhours = 2
+timeinhours = int(timeinhours)
+memoryingb = 5
+memoryingb = int(memoryingb) 
+parenv = 'shared'
+numberofslots = 1
+numberofslots = int(numberofslots)
+port = random.randrange(6222, 10000, 2)
+port = int(port)
+directory = '~'
+directory = str(directory)
+opsys = platform.system()
+opsys = str(opsys)
+pythonver = 'python/3.9.6'
+pythonver = str(pythonver)
+usegpu = 'no'
+gpu = ''
+highp = 'no'
+cudaver = '10.2'
+exclusive = 'no'
+arch = ''
+mods = ''
+lofmods = ''
+modstoload = ''
+cve = ''
+pve = ''
+#gputype = ''
+gpumem = ''
+sshlogs= 'no'
+gccver= ''
+ptf = ''
+hostname = ''
+httpcommand = '' 
+
+
+#print(f"h2jupynb version {__version__}")
+print("h2jupynb version {}".format(__version__))
+#print("h2jupynb version %s" % __version__)
+print()
+
+# Detect Windows robustly and show a short tip for PowerShell users
+is_windows = (os.name == 'nt') or sys.platform.startswith('win') or opsys.lower().startswith('win')
+if is_windows:
+  print("Note for Windows users: if Ctrl-C doesn't stop the script while the countdown is running, try Ctrl+Break (Pause/Break) or Ctrl+Fn+B on some laptops.")
+
+# Convenience flag for showing Windows-specific help and exiting early.
+if '--windows-help' in sys.argv:
+  print("Windows interruption tip: if Ctrl-C doesn't interrupt during the countdown, try Ctrl+Break (Pause/Break) or Ctrl+Fn+B. The script will also try to send a CTRL_BREAK_EVENT to child processes on Windows.")
+  sys.exit(0)
+
+if sys.version_info<(2,6,0):
+  sys.stderr.write("You need python 2.6 or later to run this script\n")
+  exit(1)
+
+
+if opsys == 'Windows':
+  try:
+    ret=call(['where','ssh.exe'])
+    #mytest = 'MINGW' in os.environ['MSYSTEM']
+  except:
+    print("It appears that Git for Windows is not installed")
+    print("or that you are not running this script from its")
+    print("Git BASH terminal. Please install either Git for")
+    print("Windows, availabe at: ")
+    print("https://git-for-windows.github.io/")
+    print("and run this script from its git BASH.")
+    sys.exit(2)
+
+
+# --- IO helpers ---
+
+#def handler(signum, frame):
+#  print("\nDetected Ctrl-c. Exiting...")
+#  try:
+#    _send_ctrl_break(pqsub)
+#    _send_ctrl_break(ptunnel)
+#  except Exception:
+#    # pqsub or ptunnel may not be defined yet (need to add them to global in main!
+#    pass
+#  print("Succesfully cleaned up connections.")
+#  #exit(1)
+#  raise SystemExit
+
+def gethostname(line):
+    """
+    Check a line from the remote output and extract the hostname.
+    Returns True if hostname was found, False otherwise.
+    """
+    global hostname
+    line = line.strip()
+    if line.startswith('HOSTNAME'):
+        hostname = line.partition('=')[2].strip()
+        return True
+    return False
+
+def gethttpcommand(line):
+    global httpcommand
+    if (line.find('http://%s:%s/'%(hostname,port))>0):
+       httpcommand = line.split(' ')[-1].strip()
+       return True
+
+def readwhile(stream,func):
+  # Choose bytes type depending on Python version (Py2: str, Py3: bytes)
+  bytes_type = str if is_py2 else bytes
+  while True:
+    line = stream.readline()
+    # Support both bytes and str from subprocess streams. Decode bytes
+    # using UTF-8 and replace undecodable bytes so we never raise a
+    # UnicodeDecodeError while reading remote output.
+    if isinstance(line, bytes_type):
+      try:
+        sline = line.decode('utf-8', errors='replace')
+      except AttributeError:
+        sline = line
+    else:
+      sline = line
+
+    if sline != '':
+      if sline.endswith('\n'):
+        print(sline[:-1])
+      else:
+        print(sline)
+      if func(sline):
+        break
+    else:
+      raise Exception("Disconnected unexpectedly.")
+
+    
+def readwhile_threaded(stream, func):
+  """Run readwhile(stream, func) in a background thread and allow the
+  main thread to handle KeyboardInterrupt (Ctrl-C) on Windows PowerShell.
+
+  This helper joins the reader thread in a loop so KeyboardInterrupt can be
+  received and cause immediate cleanup.
+  """
+  exc = []
+
+  def target():
+    try:
+      readwhile(stream, func)
+    except Exception as e:
+      exc.append(e)
+
+  t = Thread(target=target)
+  # Python 2's Thread ctor doesn't accept `daemon=`; set attribute for both versions
+  try:
+    t.daemon = True
+  except Exception:
+    pass
+  t.start()
+  try:
+    while t.is_alive():
+      t.join(timeout=0.1)
+  except KeyboardInterrupt:
+    # Best-effort cleanup here; pqsub/ptunnel may or may not be defined
+    try:
+      _send_ctrl_break(pqsub)
+      _send_ctrl_break(ptunnel)
+    except Exception:
+      pass
+    sys.exit(1)
+
+  if exc:
+    # Re-raise the first exception from the reader thread
+    raise exc[0]
+
+    
+# --- helper functions ---
+def print_usage():
+  print("Usage:")
+  print("h2jupynb [-u <Hoffman2 user name>] [-v <python-version>] \n         [-t <time, integer number of hours>] [-m <memory, integer number of GB per core>] \n         [-e <parallel environment: 1 for shared, 2 for distributed>] [-s <number of slots>] \n         [-o <run on group owned nodes: yes/no>] [-x <run on an exclusively reserved node: yes/no>]  \n         [-a <CPU-type>] [-d <path to directory from which the jupyter NB/lab will start>] \n         [-g <run on a gpu node: yes/no>] [-c <gpu-card-type>] [-r <gpu-global-memory>] \n         [-l <cuda-version>]  [-p <port number>] [-j <conda virtual environment name>]\n         [-k <path/to/python/virtual-env>] \n         [-b <comma separated list of environmental modules>]\n         [-f </path/to/sif-file.sif> (only if python version = apptainer)]\n         [-z <write ssh debug files?: yes/no>]\n         Use -h or --help for full details.")
+
+def print_help():
+    print_usage()
+    print(
+        "\nUse one of the following for detailed help:\n"
+        "  --help_defaults     Default values\n"
+        "  --help_python       Python versions\n"
+        "  --help_apptainer    Apptainer usage\n"
+        "  --help_envs         Environments (modules, conda, venv, directory)\n"
+        "  --help_cpu          CPU options\n"
+        "  --help_gpu          GPU options\n"
+    )
+    print("=== Notes ===\n")
+    print("\t- Invalid parameters fall back to defaults")
+    print("\t- Some combinations may lead to long wait times")
+    print("\t- CPU overview: Check availability with: CLUSTER_AT_A_GLANCE")
+    print("\t- GPU overview: GPU_NODES_AT_A_GLANCE_WITH_USED_GPUs\n")
+
+    
+def help_defaults():
+    #print_usage()
+    print("\n\t=== Defaults (when no arguments are provided) ===\n")
+    print("\tUser name: same as client machine")
+    print("\tTime: 2 hours")
+    print("\tParallel environment: shared")
+    print("\tMemory per slot: 5 GB")
+    print("\tSlots: 1")
+    print("\tPython version: 3.9.6")
+    print("\tPort: 8789")
+    print("\tWorking directory: $HOME")
+    print("\tGPU: no")
+    print("\tCUDA version: 11.3 (if -g y)")
+    print("\tExclusive node: no")
+    print("\tOwned nodes: no")
+    print("\tCPU: not specified\n")
+
+def help_cpu():
+    print_usage()
+    print("\n\t=== CPU Help===\n")
+    print("\tUse -a <arch-type> to select specific architecture")
+    print("\t"r"e.g., to request intel-gold* use: -a intel-gold\\*")
+    print("\n\tTo see available CPU types and their memory connect to the cluster")
+    print("\tand issue the command: CLUSTER_AT_A_GLANCE\n")
+
+def help_gpu():
+    print_usage()
+    print("\n\t=== GPU / CUDA Help===\n")
+    print("\tUse -g yes to enable GPU")
+    print("\tCUDA: 9.2, 10.0, 10.2, 11.0, 11.3, 11.7, 11.8, 12.3 -- default is 11.3")
+    print("\tGPU cards: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100, H200, L40S")
+    print("\tGPU memory (GB): 8–141 depending on card\n")
+    print("\tGPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000 & L40S), 96 (H100), 141 (H200)")
+    print("\tTo see available GPU cards and their memory connect to the cluster")
+    print("\tand issue the command: GPU_NODES_AT_A_GLANCE_WITH_USED_GPUs\n")
+    
+def help_python():
+    print_usage()
+    print("\n\tUse -v <version> to select version of python")
+    print("\t=== Available Python versions ===\n")
+    print("\t2.7.18, 3.7.3, 3.9.6, 3.10.18, 3.11.5, 3.11.12, 3.12.9") 
+    print("\tanaconda3/2020.07, anaconda3, anaconda3/2021.11,")
+    print("\tanaconda3/2022.05, anaconda3/2023.03,")
+    print("\tmamba/1.4.2, mamba/1.5.5, apptainer\n")
+    print("\te.g., version 3.12.9 loads python/3.12.9 & any supporting module files)")
+    print("\te.g., anaconda3 defaults to:anaconda3/2021.11\n")
+
+def help_envs():
+    print_usage()
+    print("\n\t=== Environments ===\n")
+    print("\tModules: -b <comma-separated list> (e.g. -b gsl/2.6,curl/7.70.0)")
+    print("\tConda env: -j <conda env name>, requires -v <anaconda/mamba version> (e.g. -v mamba/1.5.5 -j treemix)")
+    print("\tVirtualenv: -k </PATH/TO/MYPYTHONENV>, requires -v <python version> (e.g. -v 3.12.9 -k .virtenvs/3.12.9/myenv)\n")
+    print("\tRoot directory of jupyter session (defaults to $HOME): -d </PATH/TO/DIR>") 
+    print("\t"r"(e.g., -d r$HOME/PATH/TO/DIR, or -d \$SCRATCH/MYDIR)")
+    print()
+
+def help_apptainer():
+    print_usage()
+    print("\n\t=== Apptainer ===\n")
+    print("\tIf python version is set to 'apptainer' (-v apptainer), provide path to .sif container")
+    print("\t"r"e.g.: -f \$HOME/container.sif or -f \$H2_CONTAINER_LOC/rosetta-ml420-jupyter.sif")
+    print()
+
+
+def main(argv):
+  # ------------------------------
+  # Globals for options/args only
+  # ------------------------------
+  global  username, timeinhours, memoryingb, numberofslots
+  global  pythonver, port, directory, usegpu, gpu, gpumem
+  global  cudaver, highp, exclusive, arch, parenv, mods
+  global  cve, pve, lofmods, modstoload, sshlogs, gccver, ptf
+  global  hostname, httpcommand
+
+  # ------------------------------
+  # Local variables
+  # ------------------------------
+  pqsub = None
+  ptunnel = None
+  
+  # ------------------------------
+  # Parse arguments
+  # ------------------------------
+  try:
+    opts, args = getopt.getopt(
+        sys.argv[1:],"hu:t:m:e:s:v:p:d:g:c:r:l:o:x:a:b:j:k:f:z:",
+        [
+                "help",
+                "help_defaults",
+                "help_python",
+                "help_gpu",
+                "help_cpu",
+                "help_envs",
+                "help_apptainer",
+                "username=",
+                "timeinhours=",
+                "memoryingn=",
+                "parallel-enviromnment=",
+                "numberofslots=",
+                "pythonver=",
+                "port=",
+                "dir=",
+                "usegpu=",
+                "gpu_card=",
+                "gpu_mem",
+                "cudaver=",
+                "highp=",
+                "exclusive=",
+                "arch=",
+                "modules=",
+                "conda-virt-env=",
+                "python-venv-path=",
+                "sif-file-path=",
+                "ssh-debug-files="
+        ]
+    )
+
+  except getopt.GetoptError:
+    print_usage() 
+    sys.exit(2)
+  
+  # ------------------------------
+  # Process variables
+  # ------------------------------
+  for opt, arg in opts:
+    #print(opt, arg)
+    if opt in ("-h ", "--help"):
+      print_help()
+      sys.exit(0)
+    elif opt in ("--help_defaults"):
+      help_defaults()
+      sys.exit(0)
+    elif opt in ("--help_python"):
+      help_python()
+      sys.exit(0)
+    elif opt in ("--help_gpu"):
+      help_gpu()
+      sys.exit(0)
+    elif opt in ("--help_cpu"):
+      help_cpu()
+      sys.exit(0)
+    elif opt in ("--help_envs"):
+      help_envs()
+      sys.exit(0)
+    elif opt in ("--help_apptainer"):
+      help_apptainer()
+      sys.exit(0)
+    elif opt in ("-u", "--user"):
+      username = arg
+      username = str(username)
+    elif opt in ("-w", "--what"):
+      a_command = arg
+      a_command = str(a_command)
+      print("A_command= ",a_command)
+    elif opt in ("-t", "--time"):
+      timeinhours = arg
+      try:
+        timeinhours=int(timeinhours)
+      except ValueError:
+        print("The time entered is not in a valid format. Setting the time to 2 hours...")
+        timeinhours = 2
+    elif opt in ("-m", "--memory"):
+      memoryingb = arg
+      try:
+        memoryingb=int(memoryingb)
+      except ValueError:
+        print("The memory entered is not in a valid format. Setting the memory to 5GB per computing core...")
+        memoryingb = 5
+    elif opt in ("-e", "--parallel-environment"):
+      parenv = arg
+      try:
+        parenv=int(parenv)
+      except ValueError:
+        print("The parallel environment requested is invalid. Setting the parallel environmen to shared...")
+        parenv = 1
+      if (parenv == 1):
+        parenv = 'shared'
+      elif (parenv == 2):
+        parenv = 'dc\\*'
+      else:
+        print("Setting the parallel environmen to shared...")
+        parenv = 'shared'
+    elif opt in ("-s", "--slots"):
+      numberofslots = arg
+      try:
+        numberofslots=int(numberofslots)
+      except ValueError:
+        print("The requested number of computing cores (or slots) is invalid. Setting the number of slots to 1...")
+        numberofslots = 1
+    elif opt in ("-v", "--version"):
+      pythonver = arg
+      pythonver = str(pythonver)
+      if (not pythonver == '2.7.18') and  (not pythonver == '3.7.3') and (not pythonver == '3.9.6') and (not pythonver =='3.10.18') and (not pythonver == '3.11.5') and (not pythonver == '3.11.12')  and (not pythonver == '3.12.9') and (not pythonver == 'anaconda3/2020.11') and (not pythonver == 'anaconda3/2020.07') and (not pythonver == 'anaconda3/2021.11') and (not pythonver == 'anaconda3/2022.05') and (not pythonver == 'anaconda3/2023.03') and (not pythonver == 'anaconda3') and (not pythonver == 'mamba/1.4.2') and (not pythonver == 'mamba/1.5.5') and (not pythonver == 'mamba') and (not pythonver == 'apptainer'):
+        print("version, ", pythonver,", of python not available")
+        print("setting python version to 3.9.6")
+        pythonver = 'python/3.9.6'
+      if (pythonver == '3.7.3'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '2.7.18'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.9.6'):
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.10.18'):
+        gccver = "gcc/11.3.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.11.5'):
+        gccver = "gcc/7.5.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.11.12'):
+        gccver = "gcc/11.3.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == '3.12.9'):
+        gccver = "gcc/11.3.0"
+        pythonver = "python/"+pythonver
+      elif (pythonver == 'anaconda3/2020.07'):
+        pythonver = "anaconda3/2020.07"
+      elif (pythonver == 'anaconda3'):
+        pythonver = "anaconda3"
+      elif (pythonver == 'anaconda3/2020.11'):
+        pythonver = "anaconda3/2020.11"
+      elif (pythonver == 'anaconda3/2021.11'):
+        pythonver = "anaconda3/2021.11"
+      elif (pythonver == 'anaconda3/2022.05'):
+        pythonver = "anaconda3/2022.05"
+      elif (pythonver == 'anaconda3/2023.03'):
+        pythonver = "anaconda3/2023.03"
+      elif (pythonver == 'mamba/1.4.2'):
+        pythonver = "mamba/1.4.2"
+      elif (pythonver == 'mamba/1.5.5'):
+        pythonver = "mamba/1.5.5"
+      elif (pythonver == 'mamba'):
+        pythonver = "mamba"
+      elif (pythonver == 'apptainer'):
+        pythonver = "apptainer"
+    elif opt in ("-p", "--port"):
+      port = arg
+      try:
+        port=int(port)
+      except ValueError:
+        print("The network port requested is invalid. Setting the port to 8789...")
+        port = 8789
+    elif opt in ("-d", "--dir"):
+      directory = arg
+      directory = str(directory)
+    elif opt in ("-g", "--usegpu"):
+      usegpu = arg
+      usegpu = str(usegpu)
+      if (usegpu == 'Yes') or (usegpu == 'yes') or (usegpu == 'YES') or (usegpu == 'Y') or (usegpu == 'y'):
+        #print("Jupyter notebook or lab will run on a GPU node")
+        usegpu='yes'
+      else:
+        #print("TO RUN ON A GPU NODE USE: -g yes ")
+        usegpu = 'no'
+        #print("Jupyter notebook or lab will NOT run on a GPU node")
+    elif opt in ("-c", "--gpu_card"):
+      gpu = arg
+      gpu = str(gpu)
+      #print(f"GPU = {gpu}")
+      if ((gpu != 'K40') and (gpu != 'P4') and (gpu != 'GTX1080Ti') and (gpu != 'RTX2080Ti') and (gpu != 'V100') and ( gpu != 'A100') and ( gpu != 'A6000') and ( gpu != 'H100') and ( gpu != 'H200') and ( gpu != 'L40S')) :
+        print("version, ",gpu,", of GPU not available")
+        print("setting GPU card to ANY")
+        gpu = ''
+      else:
+        usegpu='yes'
+    elif opt in ("-r", "--gpu_mem"):
+      gpumem = arg
+      try:
+        gpumem=int(gpumem)
+      except ValueError:
+        print("GPU global memory should be entered as an integer number... ")
+      if (gpumem == 8):
+        print("GPU global memory = ",gpumem,"GB available for card P4")
+        print("setting GPU card to P4")
+        gpu = 'P4'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif (gpumem == 12):
+        if (not gpu == 'K40'):
+          print("GPU global memory = ",gpumem,"GB available for card GTX1080Ti")
+          print("setting GPU card to GTX1080Ti")
+          gpu = 'GTX1080Ti'
+          usegpu='yes'
+          gpumem=str(gpumem)
+        else:
+          usegpu='yes'
+          gpumem=str(gpumem)
+      elif (gpumem == 10):
+        print("GPU global memory = ",gpumem,"GB available for card RTX2080Ti")
+        print("setting GPU card to RTX2080Ti")
+        gpu = 'RTX2080Ti'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif (gpumem == 32):
+        print("GPU global memory = ",gpumem,"GB available for card V100")
+        print("setting GPU card to V100")
+        gpu = 'V100'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif (gpumem == 40):
+        print("GPU global memory = ",gpumem,"GB available for card A100")
+        print("setting GPU card to A100")
+        gpu = 'A100'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif (gpumem == 48):
+        if (not gpu == 'L40S'):
+          print("GPU global memory = ",gpumem,"GB available for cards A6000 & L40S")
+          print("setting GPU card to A6000")
+          gpu = 'A6000'
+          usegpu='yes'
+          gpumem=str(gpumem)
+        else:
+          #print("GPU global memory = ",gpumem,"GB available for card L40S")
+          #print("setting GPU card to L40S")
+          gpu = 'L40S'
+          usegpu='yes'
+          gpumem=str(gpumem)
+      elif (gpumem == 80):
+        print("GPU global memory = ",gpumem,"GB available for card A100")
+        print("setting GPU card to A100")
+        gpu = 'A100'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif ( gpumem == 96):
+        print("GPU global memory = ",gpumem,"GB available for card H100")
+        print("setting GPU card to H100")
+        gpu = 'H100'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      elif ( gpumem == 141):
+        print("GPU global memory = ",gpumem,"GB available for card H100")
+        print("setting GPU card to H200")
+        gpu = 'H200'
+        usegpu='yes'
+        gpumem=str(gpumem)
+      else:
+        print("GPU global memory = ",gpumem,"GB not available")
+        print("setting GPU global memory version to ANY")
+        print("YOU SHOULD ENTER ONLY A NUMERIC VALUE")
+        gpumem = ''
+    elif opt in ("-l", "--cuda"):
+      cudaver = arg
+      cudaver = str(cudaver)
+      if (not cudaver == '9.2') and (not cudaver == '10.0') and (not cudaver == '10.2') and (not cudaver == '11.0') and (not cudaver == '11.3') and (not cudaver == '11.7') and (not cudaver == '11.8') and (not cudaver == '12.3'):
+        print("version, ",cudaver,", not available")
+        print("setting cuda version to 11.8")
+        cudaver = '11.3'
+    elif opt in ("-o", "--highp"):
+      highp = arg
+      highp = str(highp)
+      #print("HIGHP= ",highp)
+      if ( highp == 'NO') or (highp == 'No') or (highp == 'no') or (highp == 'nO') or (highp == 'N') or (highp == 'n'): 
+        print("HIGHP= ",highp," Jupyter notebook or lab will *not* run on owned node(s)")
+        highp = 'no'
+      elif ( highp == 'Yes') or ( highp == 'yes') or ( highp == 'YES') or ( highp == 'Y') or ( highp == 'y'):
+        print("HIGHP= ",highp," Jupyter notebook or lab will run on owned node(s)")
+        highp='yes'
+    elif opt in ("-x", "--exclusive"):
+      exclusive = arg
+      #print("EXCL= ",exclusive)
+      exclusive = str(exclusive)
+      #print("EXCL= ",exclusive)
+      if ( exclusive == 'NO') or (exclusive == 'No') or (exclusive == 'no') or (exclusive == 'nO') or (exclusive == 'N') or (exclusive == 'n'):
+        print("Jupyter notebook or lab will not run in exclusive mode")
+        exclusive = 'no'
+      elif (exclusive == 'Yes') or (exclusive == 'yes') or (exclusive == 'YES') or (exclusive == 'Y') or (exclusive == 'y'):
+        print("Jupyter notebook or lab will run in exclusive mode")
+        exclusive='yes'
+      else:
+        print("EXCLUSIVE=",exclusive)
+    elif opt in ("-a", "--arch"):
+      arch = arg
+      arch = str(arch)
+      if ( not arch == 'amd-epyc-7642' ) and ( not arch == 'intel-E5-2650' ) and ( not arch == 'intel-E5-2650v2' ) and ( not arch == 'intel-E5-2650v4' ) and ( not arch == 'intel-E5-2670' ) and ( not arch == 'intel-E5-2670v2' ) and ( not arch == 'intel-E5-2670v3' ) and ( not arch == 'intel-E5-2697Av4' ) and ( not arch == 'intel-E5-4620v2' ) and ( not arch == 'intel-E7-8890v4' ) and ( not arch == 'intel-gold-5118' ) and ( not arch == 'intel-gold-5218' ) and ( not arch == 'intel-gold-6140' ) and ( not arch == 'intel-gold-6240' ) and ( not arch == 'lx-amd64' ) and (not arch == 'intel\\*') and (not arch == 'intel-gold\\*'):
+        print("version, ",arch,", of CPU not available")
+        print("no CPU-type will be requested")
+        arch = ''
+    elif opt in ("-b", "--modules"):
+      mods = arg
+      mods = str(mods)
+      lofmods=mods.split(",")
+      for l in lofmods:
+        if ( modstoload == '' ):
+          modstoload="module load " + l
+        else:
+          modstoload=modstoload + "; module load " + l
+    elif opt in ("-j", "--conda-virt-env"):
+      cve = arg
+      cve = str(cve)
+      print("cve=",cve)
+    elif opt in ("-k", "--python-venv-path"):
+      pve = arg
+      pve = str(pve)
+      print("pve=",pve)
+    elif opt in ("-f", "--sif-file-path"):
+      ptf = arg
+      ptf = str(ptf)
+      print("ptf=",ptf)
+    elif opt in ("-z", "--ssh-debug-files"):
+      sshlogs = arg
+      sshlogs = str(sshlogs)
+      if ( sshlogs == 'NO') or (sshlogs == 'No') or (sshlogs == 'no') or (sshlogs == 'nO') or (sshlogs == 'N') or (sshlogs == 'n'): 
+        print("SSHLOGS= ",sshlogs," SSH logfiles will not be written.")
+        sshlogs = 'no'
+      elif ( sshlogs == 'Yes') or ( sshlogs == 'yes') or ( sshlogs == 'YES') or ( sshlogs == 'Y') or ( sshlogs == 'y'):
+        print("SSHLOGS= ",sshlogs," SSH logfiles will be written.")
+        sshlogs='yes'
+    else:
+      print_usage()
+      sys.exit(1)
+  
+  # ------------------------------
+  # Windows bits (probably not needed)
+  # ------------------------------    
+  if not username:
+    if opsys == 'Windows':
+      username = str(os.environ["USERNAME"])
+    else:
+      username = str(os.environ["USER"])
+
+  # ------------------------------
+  # Print out summary/arguments
+  # ------------------------------
+  print("") 
+  print("The requested Hoffman2 Cluster user name is:", username )
+  print("The requested runtime is:", timeinhours,"hours" )
+  print("The requested memory per slots is:", memoryingb,"GB")
+  if (numberofslots > 1):
+    print("The parallel environment is:", parenv)
+    print("The number of slots is:", numberofslots)
+    print("The version of python for the notebook is:", pythonver)
+  if (highp == 'yes'):
+    print("Your Jupyter NB or lab will run on owned resources")
+  if (usegpu == 'yes'):
+    if (gpu==''):
+      print("Your Jupyter NB or lab will run on a GPU node")
+    else:
+      if (gpumem == ''):
+        if (cudaver != ''):
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," and load cuda version",cudaver)
+        else:
+          print("Your Jupyter NB or lab will run on GPU card ",gpu)
+      else:
+        if (cudaver != ''):
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," with ",gpumem,"GB of global GPU memory and load cuda version",cudaver)
+        else:
+          print("Your Jupyter NB or lab will run on GPU card ",gpu," with ",gpumem,"GB of global GPU memory")
+  if (port != ''):
+    print("Your Jupyter NB or lab will run on port ",port)
+  if (exclusive == 'yes'):
+    print("Your Jupyter NB or lab will reserve a node exclusively ")
+  if (directory == '~'):
+    print("The directory on Hoffman2 is $HOME")
+  else:
+    print("The directory on Hoffman2 is", directory)
+  if (arch != ''):
+    print("Your Jupyter NB or lab will run on ",arch," CPU")
+  if (mods != ''):
+    print("Your Jupyter NB or lab will load these environmental modules ",mods)
+  if (cve != ''):
+    print("Your Jupyter NB or lab will load this conda virtual environment ",cve)  
+  if (pve != ''):
+    print("Your Jupyter NB or lab will load this python virtual environment ",pve)
+  if (ptf != ''):
+    print("Your Jupyter NB will run off the apptainer container ",pve)    
+  if (sshlogs != ''):
+    print("SSH log files will be written ",sshlogs)
+
+  #### moved here
+  print("usegpu= ",usegpu,"; highp= ",highp,"; exclusive= ",exclusive, "; gputype= ",gpu, "; gpu_mem= ",gpumem, "; arch= ",arch, "; time= ",timeinhours, "; mem= ",memoryingb, "; PE= ", parenv, "; NSLOTS= ",numberofslots,"sshlogs",sshlogs)
+
+  # --- some more variable processing ---
+  if ( arch != '' ):
+    arch=',arch='+arch
+  if ( gpu != '' ):
+    gpu=','+gpu
+  if ( gpumem != '' ):
+    gpumem=',gpu_mem='+gpumem
+  # add a space after ptf if it exists
+  #ptf_part = f"{ptf} " if ptf else ''
+  ptf_part = ptf + " " if ptf else ''
+
+  # ------------------------------
+  # Build QSUB_TEMPLATE depending on options
+  # ------------------------------
+  if (usegpu == 'no') and (highp == 'no') and (exclusive == 'no'):
+    #   QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l i,h_rt=%d:00:00,h_data=%dG%s -pe dc\* %d")
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG%s -pe %s %d -now n")
+  elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'no'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,highp%s -pe %s %d -w e")
+  elif (usegpu == 'no') and (highp == 'no') and (exclusive == 'yes'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive%s -pe %s %d -w e")
+  elif (usegpu == 'no') and (highp == 'yes') and (exclusive == 'yes'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l h_rt=%d:00:00,h_data=%dG,exclusive,highp%s -pe %s %d -w e")
+  elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'no'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
+  elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'no'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,highp,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
+  elif (usegpu == 'yes') and (highp == 'yes') and (exclusive == 'yes'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,highp,exclusive,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
+  elif (usegpu == 'yes') and (highp == 'no') and (exclusive == 'yes'):
+    QSUB_TEMPLATE = os.environ.get("IPYNB_QSUB_TEMPLATE", "qrsh -N JUPYNB -l gpu,exclusive,h_rt=%d:00:00,h_data=%dG%s%s%s -pe %s %d -w e")
+  # --- module activation templates ---
+  MODULE_LOADCUDA_TEMP = "module load cuda/%s"
+  MODULE_LOAD_TEMP = "module load %s"
+  CONDA_ACTIVATE = "conda activate %s"
+  PYTHON_ACTIVATE= "source %s/bin/activate"
+  #APPTAINER_ACTIVATE= "apptainer exec %s"
+  APPTAINER_ACTIVATE= "apptainer exec "
+  CD_TEMP = "cd %s"
+  
+  # print interactive session summary ---
+  print()
+  print("THE FOLLOWING INTERACTIVE SESSION WILL BE REQUESTED:")
+  print()
+  
+  if (usegpu == 'no'):
+    print((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+  elif (usegpu == 'yes'):
+    print((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,gpumem,arch,parenv,numberofslots))+"\n") 
+  
+  print("\nIF THE REQUESTED RESOURCES DO NOT LOOK CORRECT INTERRUPT W/ `Control C`")
+  print("RUN: `h2jupynb --help` TO SEE A FULL LIST OF OPTIONS") 
+  time.sleep(2) 
+  #exit()
+  
+  # --- jupyter notebook template ---
+  STARTNBCMD = "jupyter notebook"
+  print('STARTNBCMD = ',STARTNBCMD)
+  
+  # ------------------------------
+  # Set up SSH session
+  # ------------------------------
+  ssh_args_common = [
+    'ssh',
+    '-o', 'ServerAliveCountMax=5',
+    '-o', 'IPQoS=throughput',
+    '-o', 'ServerAliveInterval=30',
+    '-X', '-Y', '-t', '-t', '-4',
+    '%s@hoffman2.idre.ucla.edu' % username
+  ]
+
+  if sshlogs == 'no':
+    ssh_args = ssh_args_common
+  elif sshlogs == 'yes':
+    ssh_args = ssh_args_common[:-1] + ['-vvv', '-E', 'myssh.log', ssh_args_common[-1]]
+
+  # Open pipes; on Python3 we use text mode with explicit UTF-8 decoding
+  # and errors='replace'. Under Python2 we open binary pipes and rely on
+  # readwhile to decode bytes (Python2's Popen doesn't support text/encoding args).
+  if is_py2:
+    if opsys == 'Windows':
+      pqsub = Popen(ssh_args,stdin=PIPE,stdout=PIPE,stderr=PIPE,creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub = Popen(ssh_args,stdin=PIPE,stdout=PIPE,stderr=PIPE)
+  else:
+    if opsys == 'Windows':
+      pqsub=Popen(ssh_args,stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      pqsub=Popen(ssh_args,stdin=PIPE,stdout=PIPE,stderr=PIPE,text=True,encoding='utf-8',errors='replace')
+  # Flush pipes once
+  pqsub.stdin.flush()
+  pqsub.stdout.flush()
+
+    
+  # ------------------------------
+  # Set up interactive session (pqsub)
+  # ------------------------------    
+  if (usegpu == 'no'):
+    pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,arch,parenv,numberofslots))+"\n")
+  elif (usegpu == 'yes'):
+    pqsub.stdin.write((QSUB_TEMPLATE % (timeinhours,memoryingb,gpu,gpumem,arch,parenv,numberofslots))+"\n") 
+    pqsub.stdin.write(MODULE_LOADCUDA_TEMP % (cudaver) +"\n")
+  
+  if (mods != ''):
+    pqsub.stdin.write(modstoload +"\n")
+
+  # gcc to python map:
+  gcc_map = {
+    'python/3.10.18': 'gcc/11.3.0',
+    'python/3.11.5':  'gcc/7.5.0',
+    'python/3.11.12': 'gcc/11.3.0',
+    'python/3.12.9':  'gcc/11.3.0',
+  }
+  if pythonver in gcc_map:
+    pqsub.stdin.write(MODULE_LOAD_TEMP % gcc_map[pythonver] + "\n")
+  
+  pqsub.stdin.write(MODULE_LOAD_TEMP % (pythonver) +"\n")
+  
+  if (cve != ''):
+    pqsub.stdin.write(CONDA_ACTIVATE % (cve) +"\n")
+  if (pve != ''):
+    pqsub.stdin.write(PYTHON_ACTIVATE % (pve) +"\n")
+  
+  # send initial commands to pqsub
+  pqsub.stdin.write('module li\n')
+  pqsub.stdin.write(CD_TEMP % (directory) +"\n")
+  pqsub.stdin.write('echo HOSTNAME=`hostname`\n')
+  pqsub.stdin.flush()
+  
+  # wait and capture hostname
+  readwhile_threaded(pqsub.stdout, gethostname)
+  
+  # check if we are on a login node
+  if ('login' in hostname):
+    print("\n ############################################")
+    print(" ******We seem to be on the wrong host!******")
+    print(" Most likely the Jupyter session cannot start")
+    print(" because the interactive session cannot be   ")
+    print(" allocated. Please open a ticket at:         ")
+    print(" https://support.idre.ucla.edu/helpdesk      ")
+    print(" providing the exact command you used to     ")
+    print(" start the session. Copying and pasting the  ")
+    print(" the output of your terminal from the issuing of ")
+    print(" the h2jupynb command will expedite matters. ")
+    print(" **NOTE: GPU requests will exit if a gpu node")
+    print("         is not available when the request is")
+    print("         made. Check GPU availability with:  ")
+    print("         GPU_NODES_AT_A_GLANCE_WITH_USED_GPUs")
+    print(" Exiting...                                  ")
+    print(" #############################################\n")
+    quit()
+  
+  #print("ptf=",ptf)
+  #print("APPTAINER_ACTIVATE=",APPTAINER_ACTIVATE)
+  
+  # ------------------------------
+  # Start jupyter session
+  # ------------------------------      
+  #if ptf == '' and pythonver != 'apptainer':
+  #  pqsub.stdin.write(
+  #    f"{STARTNBCMD} --no-browser --ip=0.0.0.0 --port={port}; echo exitcode: $?\n"
+  #  )
+  #else:
+  #  pqsub.stdin.write(
+  #    f"{APPTAINER_ACTIVATE}{ptf_part}{STARTNBCMD} "
+  #    f"--no-browser --ip=0.0.0.0 --port={port}; echo exitcode: $?\n"
+  #  )
+  if ptf == '' and pythonver != 'apptainer':
+    pqsub.stdin.write(
+      "{} --no-browser --ip=0.0.0.0 --port={}; echo exitcode: $?\n".format(
+        STARTNBCMD, port
+      )
+    )
+  else:
+    pqsub.stdin.write(
+      "{}{}{} --no-browser --ip=0.0.0.0 --port={}; echo exitcode: $?\n".format(
+        APPTAINER_ACTIVATE, ptf_part, STARTNBCMD, port
+      )
+    )  
+  pqsub.stdin.flush()
+  
+  # wait for the Jupyter notebook URL
+  if (STARTNBCMD == 'jupyter notebook'):
+    readwhile_threaded(pqsub.stdout, gethttpcommand)
+  else:
+    readwhile_threaded(pqsub.stdout, lambda line: line.find('http://%s:%s/'%(hostname,port))>0)
+  
+  print("httpcommand=",httpcommand)  
+  token = httpcommand.split("=")[-1]
+  newhttpcommand = 'http://localhost:%s/?token=%s'%(port,token)
+  print("httpcommand=",newhttpcommand)
+
+  # ------------------------------
+  # Start SSH port forwarding
+  # ------------------------------
+  if sshlogs == 'no':
+    tunnel = [
+      'ssh',
+      '-o', 'ServerAliveCountMax=5',
+      '-o', 'IPQoS=throughput',
+      '-o', 'ServerAliveInterval=30',
+      '-g',
+      '-L', '%s:%s:%s' % (port, hostname, port),
+      '-t', '%s@hoffman2.idre.ucla.edu' % username
+    ]
+  else:
+    tunnel = [
+      'ssh',
+      '-o', 'ServerAliveCountMax=5',
+      '-o', 'IPQoS=throughput',
+      '-o', 'ServerAliveInterval=30',
+      '-vvv', '-E', 'mytunnel.log',
+      '-g',
+      '-L', '%s:%s:%s' % (port, hostname, port),
+      '-t', '%s@hoffman2.idre.ucla.edu' % username
+    ]
+        
+  print('\nAbout to open SSH tunnel:')
+  print(' You may be prompted for your Hoffman2 password or your SSH key passphrase')
+  print(' a second time when the tunnel is created. This is normal if SSH key-based')
+  print(' authentication or an SSH agent is not in use for the tunnel step.')
+  print(' To avoid a second prompt, consider:')
+  print('  - loading your key into an SSH agent (ssh-agent / Pageant),')
+  print('  - or using an SSH key without a passphrase (less secure).')
+  print('')
+  print('Proceeding to open the SSH tunnel...')
+  print(' '.join(tunnel))
+    
+  # Open tunnel pipes. On Python 2 we use binary pipes and let readwhile decode;
+  # on Python 3 we use text mode with explicit UTF-8 decoding and errors='replace'.
+  if is_py2:
+    if opsys == 'Windows':
+      ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE)
+  else:
+    if opsys == 'Windows':
+      ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+      ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace')
+
+  ptunnel.stdin.write('echo TUNNEL\n')
+  ptunnel.stdin.flush()
+    
+  # Wait until we see "TUNNEL" in stdout
+  readwhile_threaded(ptunnel.stdout,lambda line: line.startswith('TUNNEL'))
+  
+  if ('CYGWIN' in opsys) or ('Cygwin' in opsys) or ('cygwin' in opsys):
+    if (STARTNBCMD == 'jupyter notebook'):
+      call(["cygstart",newhttpcommand])
+    else:
+      call(["cygstart",'http://localhost:%s'%(port)])
+  else:
+    if (STARTNBCMD == 'jupyter notebook'):
+      webbrowser.open(newhttpcommand)
+    else:
+      webbrowser.open('http://localhost:%s'%(port))
+  
+  print("Succesfully opened notebook!")
+  print("Kill this process to end your notebook connection.")
+  print("")
+  print("How to terminate:")
+  print(" - On Unix/macOS: press Ctrl-C in this terminal to request shutdown.")
+  print(" - On Windows PowerShell: if Ctrl-C does not stop the script, press Ctrl+Break (Pause/Break)")
+  print("   or the laptop equivalent (often Ctrl+Fn+Break or Ctrl+Fn+B). The distributable will also")
+  print("   attempt to send a CTRL_BREAK_EVENT to the SSH/tunnel child processes to help them exit.")
+  print("")
+  print("If child processes do not terminate, the script will fall back to killing them. If that fails,")
+  print("you can close this terminal window as a last resort.")
+  
+  # set up Control C handler 
+  #signal.signal(signal.SIGINT, handler)
+  
+  # Start a background countdown so the main thread remains responsive to Ctrl-C.
+  countdown = Countdown(timeinhours * 3600, interval=10)
+  countdown.start()
+  try:
+    while countdown.is_alive():
+      countdown.join(timeout=1)
+  except KeyboardInterrupt:
+    print('\nCtrl-C pressed. Cleaning up...')
+  finally:
+    countdown.stop()
+    countdown.join(timeout=2)
+    
+    # Clean up child processes
+    try:
+      pqsub.kill()
+    except Exception:
+      pass
+    try:
+      ptunnel.kill()
+    except Exception:
+      pass
+    
+    print("Elapsted runtime. Terminating...")
+    print("Succesfully cleaned up connections.")
+### function main def ends here
+
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
+
