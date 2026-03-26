@@ -70,16 +70,13 @@ __version__="3.6"
 # Inline Countdown so this distributable is self-contained (no external import).
 class Countdown(Thread):
   """Background countdown timer that prints remaining time to the terminal.
-
-  Copied here so the distributable doesn't import the modular helper file.
-  Works on Python 2 and 3. Use `stop()` to request termination early.
   """
   def __init__(self, total_seconds, interval=10):
     super(Countdown, self).__init__()
     self.total = int(total_seconds)
     self.interval = max(1, int(interval))
     try:
-      # Python 3/2 compatible Event import earlier in file
+      # Python 3/2 compatible Event
       from threading import Event
       self._stop_event = Event()
     except Exception:
@@ -145,7 +142,6 @@ class Countdown(Thread):
 
 random.seed(datetime.now().strftime("%S"))
 
-# Maintain Python 2 compatibility when needed.
 # Provide a small compatibility layer so the script can run under Python2 or Python3.
 is_py2 = sys.version_info[0] == 2
 # Ensure `xrange` is available on both versions (Python2 has it; Python3 will alias it to range)
