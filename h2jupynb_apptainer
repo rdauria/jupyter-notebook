@@ -390,7 +390,7 @@ def help_gpu():
     print("\tUse -g yes to enable GPU")
     print("\tCUDA: 9.2, 10.0, 10.2, 11.0, 11.3, 11.7, 11.8, 12.3 -- default is 11.3")
     print("\tGPU cards: P4, GTX1080Ti, RTX2080Ti, V100, A100, A6000, H100, H200, L40S")
-    print("\tGPU memory (GB): 8–141 depending on card\n")
+    print("\tGPU memory (GB): 8-141 depending on card\n")
     print("\tGPU memory currently available are (in GB): 12 (K40), 8 (P4), 12 (GTX1080Ti), 10 (RTX2080Ti),\n\t 32 (V100), 40 or 80 (A100), 48 (A6000 & L40S), 96 (H100), 141 (H200)")
     print("\tTo see available GPU cards and their memory connect to the cluster")
     print("\tand issue the command: GPU_NODES_AT_A_GLANCE_WITH_USED_GPUs\n")
@@ -1071,7 +1071,7 @@ def main(argv):
       ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
     else:
       ptunnel = Popen(tunnel,stdout=PIPE,stdin=PIPE,text=True,encoding='utf-8',errors='replace')
-
+  
   ptunnel.stdin.write('echo TUNNEL\n')
   ptunnel.stdin.flush()
     
